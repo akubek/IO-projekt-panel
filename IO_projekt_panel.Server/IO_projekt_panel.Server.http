@@ -1,0 +1,6 @@
+@IO_projekt_panel.Server_HostAddress = http://localhost:5115
+
+GET {{IO_projekt_panel.Server_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
