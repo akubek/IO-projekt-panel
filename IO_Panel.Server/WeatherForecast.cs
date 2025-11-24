@@ -1,4 +1,4 @@
-namespace IO_projekt_panel.Server
+namespace IO_Panel.Server
 {
     public class WeatherForecast
     {
