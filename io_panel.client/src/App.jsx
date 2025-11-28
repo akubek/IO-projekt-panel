@@ -2,6 +2,13 @@ import { useEffect, useState } from 'react';
 import './App.css';
 import DeviceCard from './components/DeviceCard'; //importowanie komponentu DeviceCard
 
+import { Plus, Cpu } from "lucide-react";
+import { motion } from "framer-motion"
+import { AnimatePresence } from "framer-motion";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import Button from "@mui/material/Button";
+
+
 //Próba po³¹czenia frontu z backendem i wypisywania urz¹dzeñ z backendu, bazowane na przyk³adzie z weatherforecast
 function App() {
     const [devices, setDevices] = useState();
