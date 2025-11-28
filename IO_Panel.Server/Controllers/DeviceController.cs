@@ -18,9 +18,9 @@ namespace IO_Panel.Server.Controllers
         // Przykładowe dane urządzeń, aktualnie stałe
         private static readonly List<DeviceDto> Devices = new()
         {
-            new DeviceDto { Id = "dev-1", Name = "Sensor A", Status = "Online", LastSeen = DateTime.UtcNow.AddMinutes(-1), Localization = "Living room" },
-            new DeviceDto { Id = "dev-2", Name = "Lamp B", Status = "Offline", LastSeen = DateTime.UtcNow.AddHours(-1), Localization = "Kitchen" },
-            new DeviceDto { Id = "dev-3", Name = "Thermometer C", Status = "Online", LastSeen = DateTime.UtcNow.AddMinutes(-1), Localization = "Garage" }
+            new DeviceDto { Id = "dev-1", Name = "Sensor A", Type = "Sensor", Status = "Online", LastSeen = DateTime.UtcNow.AddMinutes(-1), Localization = "Living room" },
+            new DeviceDto { Id = "dev-2", Name = "Lamp B",  Type = "Switch", Status = "Offline", LastSeen = DateTime.UtcNow.AddHours(-1), Localization = "Kitchen" },
+            new DeviceDto { Id = "dev-3", Name = "Thermometer C",  Type = "Slider", Status = "Online", LastSeen = DateTime.UtcNow.AddMinutes(-1), Localization = "Garage" }
         };
 
         //metoda do pobierania listy urządzeń na endpoint /device, czyli uruchamiana automatycznie przy GET (początek uruchomienia strony)
@@ -51,6 +51,7 @@ namespace IO_Panel.Server.Controllers
         {
             public string Id { get; init; } = default!;
             public string Name { get; init; } = default!;
+            public string Type { get; init; } = default!;
             public string Status { get; init; } = default!;
             public DateTime LastSeen { get; init; }
             public string Localization { get; init; } = default!;
