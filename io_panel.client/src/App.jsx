@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+Ôªøimport { useEffect, useState } from 'react';
 import './App.css';
 import DeviceCard from './components/DeviceCard'; //importowanie komponentu DeviceCard
 import LoggingInOpen from './components/LoggingInOpen'; //importowanie komponentu LoggingInOpen
@@ -6,13 +6,17 @@ import LoggingInOpen from './components/LoggingInOpen'; //importowanie komponent
 import { Plus, Cpu, User } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
 import Button from "@mui/material/Button";
+import { CircleDot } from "lucide-react";
 
 
-//PrÛba po≥πczenia frontu z backendem i wypisywania urzπdzeÒ z backendu, bazowane na przyk≥adzie z weatherforecast
+//Pr√≥ba po≈ÇƒÖczenia frontu z backendem i wypisywania urzƒÖdze≈Ñ z backendu, bazowane na przyk≈Çadzie z weatherforecast
 function App() {
     const [devices, setDevices] = useState([]);
     const [selectedDevice, setSelectedDevice] = useState(null);
     const [loggingIn, setLoggingIn] = useState(false);
+
+    // nowy stan: czy u≈ºytkownik jest zalogowany
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
 
     //Use effect, potrzebne do pobierania danych z backendu
     useEffect(() => {
@@ -47,7 +51,7 @@ function App() {
             </tbody>
         </table>;
 
-    //Wyúwietlanie
+    //Wy≈õwietlanie
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
         {/* Header */}
@@ -64,19 +68,53 @@ function App() {
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
-                            <Button className="bg-gradient-to-r !text-white from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 shadow-lg">
-                                <Plus className="w-4 h-4 mr-2" />
-                                Add Device
-                            </Button>
-                            <Button className="bg-gradient-to-r !text-white from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 shadow-lg" onClick={() => setLoggingIn(true)}>
-                                <User className="w-4 h-4 mr-2" />
-                                Log in
-                            </Button>
+                            {/* status label po lewej od przycisk√≥w */}
+                            <div className="hidden sm:flex items-center gap-2">
+                                <div
+                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium shadow-sm border ${isLoggedIn
+                                        ? "bg-blue-50 border-blue-200 text-blue-700"
+                                        : "bg-slate-100 border-slate-300 text-slate-600"}`}>
+                                    {isLoggedIn ? (<span className="font-semibold">Admin</span>
+                                    ) : (
+                                        <span className="font-semibold">User</span>
+                                    )}
+                                    <span className="flex items-center gap-1 text-xs opacity-80">
+                                        <CircleDot className="w-3 h-3" />
+                                        active
+                                    </span>
+                                </div>
+                            </div>
+
+                            {isLoggedIn ? (
+                                <Button className="bg-gradient-to-r !text-white from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 shadow-lg">
+                                    <Plus className="w-4 h-4 mr-2" />
+                                    Add Device
+                                </Button>
+                            ) : (
+                                    <Button className="bg-gradient-to-r !text-white from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 shadow-lg">
+                                    <Plus className="w-4 h-4 mr-2" />
+                                    Add Device
+                                 </Button>
+                            )}
+
+
+                            {/* pokazuj Log in gdy niezalogowany, Logout gdy zalogowany */}
+                            {!isLoggedIn ? (
+                                <Button className="bg-gradient-to-r !text-white from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 shadow-lg" onClick={() => setLoggingIn(true)}>
+                                    <User className="w-4 h-4 mr-2" />
+                                    Log in
+                                </Button>
+                            ) : (
+                                <Button className="bg-gradient-to-r !text-white from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 shadow-lg" onClick={() => setIsLoggedIn(false)}>
+                                    <User className="w-4 h-4 mr-2" />
+                                    Log out
+                                </Button>
+                            )}
                         </div>
                     </div>
                 </div>
             </div>
-            {/* Wyúwietlanie danych z tej "tabeli", najpierw normalnie potem w postaci kart */}
+            {/* Wy≈õwietlanie danych z tej "tabeli", najpierw normalnie potem w postaci kart */}
             <div>
             <h1 id="tableLabel"> Urzadzenia IoT</h1>
                 <p>Testowa lista urzadzen do porownania z kartami urzadzen</p>
@@ -91,7 +129,13 @@ function App() {
                     ))}
                 </div>
             </div>
-            <LoggingInOpen open={loggingIn} onClose={() => setLoggingIn(false)} />
+
+            {/* przekazujemy onLogin do komponentu logowania */}
+            <LoggingInOpen
+                open={loggingIn}
+                onClose={() => setLoggingIn(false)}
+                onLogin={() => { setIsLoggedIn(true); setLoggingIn(false); }}
+            />
         </div>
     );
 

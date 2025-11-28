@@ -5,17 +5,18 @@ function validateLogin(username, password) {
     // Funkcja waliduj¹ca dane logowania (testowa implementacja, bardzo prosta)
     return username === "admin" && password === "admin";
 }
-export default function LoggingInOpen({ open, onClose }) {
+export default function LoggingInOpen({ open, onClose, onLogin }) {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
 
     function handleLogin() {
         const ok = validateLogin(username, password);
-        // na razie tylko wywo³aj onClose przy poprawnym logowaniu
         if (ok) {
-            onClose && onClose();
+            // je¿eli przekazano onLogin, wywo³aj go (rodzic zamknie modal i ustawi stan)
+            if (onLogin) {
+                onLogin();
+            } 
         } else {
-            // pokazujemy b³¹d (na razie alert)
             alert("Nieprawidlowe dane");
         }
     }
