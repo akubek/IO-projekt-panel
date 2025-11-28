@@ -1,4 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using IO_Panel.Server.Models;
+using IO_Panel.Server.Repositories;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
 //Próba stworzenia podstawowego kontrolera backendu do zarządzania urządzeniami IoT, aktualnie nie przyjmują żadnych komend, jedynie zwracana jest lista urządzeń przy GET
 //przy uruchamianiu strony oraz pojedyncze urządzenie przy GET /{id}
@@ -10,33 +18,29 @@ namespace IO_Panel.Server.Controllers
     {
         //logger do logowania informacji, copilot dodał
         private readonly ILogger<DeviceController> _logger;
-        public DeviceController(ILogger<DeviceController> logger)
+        private readonly IDeviceRepository _repo;
+
+        public DeviceController(ILogger<DeviceController> logger, IDeviceRepository repo)
         {
             _logger = logger;
+            _repo = repo;
         }
 
-        // Przykładowe dane urządzeń, aktualnie stałe
-        private static readonly List<DeviceDto> Devices = new()
-        {
-            new DeviceDto { Id = "dev-1", Name = "Sensor A", Type = "Sensor", Status = "Online", LastSeen = DateTime.UtcNow.AddMinutes(-1), Localization = "Living room" },
-            new DeviceDto { Id = "dev-2", Name = "Lamp B",  Type = "Switch", Status = "Offline", LastSeen = DateTime.UtcNow.AddHours(-1), Localization = "Kitchen" },
-            new DeviceDto { Id = "dev-3", Name = "Thermometer C",  Type = "Slider", Status = "Online", LastSeen = DateTime.UtcNow.AddMinutes(-1), Localization = "Garage" }
-        };
-
         //metoda do pobierania listy urządzeń na endpoint /device, czyli uruchamiana automatycznie przy GET (początek uruchomienia strony)
-        [HttpGet(Name = "GetDevice")]
-        public ActionResult<IEnumerable<DeviceDto>> Get() => Ok(Devices);
+        [HttpGet(Name = "GetDevices")]
+        public async Task<ActionResult<IEnumerable<Device>>> Get(CancellationToken ct)
+        {
+            var devices = await _repo.GetAllAsync(ct);
+            return Ok(devices);
+        }
 
         //metoda do pobierania pojedynczego urządzenia na endpoint /device/{id}
         [HttpGet("{id}")]
-        public ActionResult<DeviceDto> Get(string id)
+        public async Task<ActionResult<Device>> Get(string id, CancellationToken ct)
         {
-            var d = Devices.FirstOrDefault(dev => dev.Id == id);
-            if (d == null)
-            {
-                return NotFound();
-            }
-            return Ok(d);
+            var device = await _repo.GetByIdAsync(id, ct);
+            if (device is null) return NotFound();
+            return Ok(device);
         }
 
         //metoda do wysyłania komend do urządzenia na endpoint /device/{id}/command
@@ -47,14 +51,31 @@ namespace IO_Panel.Server.Controllers
             // Na razie zwracamy tylko symulację przyjęcia
             return Accepted(new { deviceId = id, command = cmd.Command, status = "queued" }); //copilot dodał
         }
-        public record DeviceDto //Struktura urządzenia
+
+        [HttpPost("{id}/state")]
+        public async Task<ActionResult> SetState(string id, [FromBody] DeviceState state, CancellationToken ct)
         {
-            public string Id { get; init; } = default!;
-            public string Name { get; init; } = default!;
-            public string Type { get; init; } = default!;
-            public string Status { get; init; } = default!;
-            public DateTime LastSeen { get; init; }
-            public string Localization { get; init; } = default!;
+            try
+            {
+                await _repo.RequestStateChangeAsync(id, state, ct);
+                return Accepted(new { deviceId = id, state });
+            }
+            catch (KeyNotFoundException)
+            {
+                return NotFound();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { error = ex.Message });
+            }
+            catch (OperationCanceledException)
+            {
+                return StatusCode(499);
+            }
+            catch (Exception)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError);
+            }
         }
 
         public record CommandDto //Struktura komendy do urządzenia
