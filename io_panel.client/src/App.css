@@ -9,3 +9,25 @@ th, td {
     padding-left: 1rem;
     padding-right: 1rem;
 }
+
+/* Force primary text elements and form labels/controls to black for now */
+h1, h2, h3, p, th, td, label, input, textarea, select {
+    color: #000 !important;
+}
+
+/* Placeholder hints should be gray */
+input::placeholder,
+textarea::placeholder {
+  color: #6b7280 !important; /* slate-500 */
+  opacity: 1 !important;
+}
+
+/* vendor prefixes for placeholder compatibility */
+input::-webkit-input-placeholder { color: #6b7280 !important; opacity: 1 !important; }
+textarea::-webkit-input-placeholder { color: #6b7280 !important; opacity: 1 !important; }
+input::-moz-placeholder { color: #6b7280 !important; opacity: 1 !important; }
+textarea::-moz-placeholder { color: #6b7280 !important; opacity: 1 !important; }
+input:-ms-input-placeholder { color: #6b7280 !important; opacity: 1 !important; }
+textarea:-ms-input-placeholder { color: #6b7280 !important; opacity: 1 !important; }
+input:-moz-placeholder { color: #6b7280 !important; opacity: 1 !important; }
+textarea:-moz-placeholder { color: #6b7280 !important; opacity: 1 !important; }
