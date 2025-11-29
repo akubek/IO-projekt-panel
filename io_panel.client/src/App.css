@@ -9,3 +9,35 @@ th, td {
     padding-left: 1rem;
     padding-right: 1rem;
 }
+
+:root{
+  /* light theme */
+  --bg: #ffffff;
+  --text: #0f172a; /* slate-900 */
+  --muted: #6b7280; /* slate-500 */
+}
+
+/* dark theme */
+@media (prefers-color-scheme: dark) {
+  :root{
+    --bg: #0b1220;
+    --text: #f8fafc; /* slate-50 */
+    --muted: #94a3b8; /* slate-400 */
+  }
+}
+
+/* apply defaults site-wide with high specificity to override inline white text where possible */
+html, body, #root, .app {
+  background-color: var(--bg) !important;
+  color: var(--text) !important;
+}
+
+/* make buttons, inputs and modal text inherit unless they explicitly set a color */
+button, input, textarea, select {
+  color: inherit;
+}
+
+/* muted text helper */
+.muted {
+  color: var(--muted);
+}
