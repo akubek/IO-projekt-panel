@@ -6,9 +6,8 @@ export default function AddDeviceModal({ open, devices, onClose, onSelect }) {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
             <div className="bg-white rounded-lg shadow-lg p-6 w-11/12 max-w-3xl">
-                <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center mb-4">
                     <h3 className="text-lg font-semibold">Available Devices (external)</h3>
-                    <button className="text-sm text-slate-500" onClick={onClose}>Close</button>
                 </div>
 
                 <div className="max-h-64 overflow-auto">
@@ -23,21 +22,27 @@ export default function AddDeviceModal({ open, devices, onClose, onSelect }) {
                                     <th className="pr-4">Location</th>
                                     <th className="pr-4">Value</th>
                                     <th className="pr-4">Unit</th>
+                                    <th className="pr-4">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {devices.map((d, idx) => (
-                                    <tr
-                                        key={idx}
-                                        className="border-t cursor-pointer hover:bg-slate-50"
-                                        onClick={() => { console.log('click row', d); onSelect && onSelect(d); }}
-                                        title="Click to configure and add this device"
-                                    >
+                                    <tr key={idx} className="border-t">
                                         <td className="py-2 pr-4">{d.name}</td>
                                         <td className="py-2 pr-4">{d.type}</td>
                                         <td className="py-2 pr-4">{d.location}</td>
                                         <td className="py-2 pr-4">{d.state?.value}</td>
                                         <td className="py-2 pr-4">{d.state?.unit}</td>
+                                        <td className="py-2 pr-4">
+                                            <button
+                                                type="button"
+                                                onClick={(e) => { e.stopPropagation(); onSelect && onSelect(d); }}
+                                                className="inline-flex items-center justify-center px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+                                                aria-label={`Configure ${d.name}`}
+                                            >
+                                                +
+                                            </button>
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>

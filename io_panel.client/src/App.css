@@ -10,34 +10,24 @@ th, td {
     padding-right: 1rem;
 }
 
-:root{
-  /* light theme */
-  --bg: #ffffff;
-  --text: #0f172a; /* slate-900 */
-  --muted: #6b7280; /* slate-500 */
+/* Force primary text elements and form labels/controls to black for now */
+h1, h2, h3, p, th, td, label, input, textarea, select {
+    color: #000 !important;
 }
 
-/* dark theme */
-@media (prefers-color-scheme: dark) {
-  :root{
-    --bg: #0b1220;
-    --text: #f8fafc; /* slate-50 */
-    --muted: #94a3b8; /* slate-400 */
-  }
+/* Placeholder hints should be gray */
+input::placeholder,
+textarea::placeholder {
+  color: #6b7280 !important; /* slate-500 */
+  opacity: 1 !important;
 }
 
-/* apply defaults site-wide with high specificity to override inline white text where possible */
-html, body, #root, .app {
-  background-color: var(--bg) !important;
-  color: var(--text) !important;
-}
-
-/* make buttons, inputs and modal text inherit unless they explicitly set a color */
-button, input, textarea, select {
-  color: inherit;
-}
-
-/* muted text helper */
-.muted {
-  color: var(--muted);
-}
+/* vendor prefixes for placeholder compatibility */
+input::-webkit-input-placeholder { color: #6b7280 !important; opacity: 1 !important; }
+textarea::-webkit-input-placeholder { color: #6b7280 !important; opacity: 1 !important; }
+input::-moz-placeholder { color: #6b7280 !important; opacity: 1 !important; }
+textarea::-moz-placeholder { color: #6b7280 !important; opacity: 1 !important; }
+input:-ms-input-placeholder { color: #6b7280 !important; opacity: 1 !important; }
+textarea:-ms-input-placeholder { color: #6b7280 !important; opacity: 1 !important; }
+input:-moz-placeholder { color: #6b7280 !important; opacity: 1 !important; }
+textarea:-moz-placeholder { color: #6b7280 !important; opacity: 1 !important; }

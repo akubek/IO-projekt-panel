@@ -6,10 +6,10 @@ export default function DeviceCard({ device }) {
         <div className={`w-80 rounded-2xl shadow-lg p-4 ${cardColor}`}>
             {/*Header*/}
             <div className="space-y-1">
-                <h2 className="text-xl font-semibold flex items-center gap-2">
+                <h2 className="text-xl font-semibold flex items-center gap-2 text-slate-900 dark:text-slate-50">
                     {device.name}
                 </h2>
-                <p className="text-sm text-gray-500">{device.localization} - {device.status}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{device.localization} - {device.status}</p>
             </div>
 
             <div className="mt-4">

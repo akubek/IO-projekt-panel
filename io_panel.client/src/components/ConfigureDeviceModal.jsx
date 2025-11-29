@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
-
 export default function ConfigureDeviceModal({ open, apiDevice, onClose, onAdd }) {
+    // hooks unconditionally at top
     const [name, setName] = useState('');
     const [type, setType] = useState('');
     const [location, setLocation] = useState('');
@@ -15,15 +15,9 @@ export default function ConfigureDeviceModal({ open, apiDevice, onClose, onAdd }
 
     useEffect(() => {
         if (!open || !apiDevice) {
-            setName('');
-            setType('');
-            setLocation('');
-            setValue(0);
-            setUnit('');
-            setReadOnly(false);
-            setMin(0);
-            setMax(0);
-            setStep(0);
+            setName(''); setType(''); setLocation('');
+            setValue(0); setUnit(''); setReadOnly(false);
+            setMin(0); setMax(0); setStep(0);
             return;
         }
 
@@ -42,7 +36,18 @@ export default function ConfigureDeviceModal({ open, apiDevice, onClose, onAdd }
 
     async function handleAdd() {
         setSaving(true);
+
+        // TEMPORARY: IoT devices normally provide a GUID id.
+        // For now generate an id from the name (sanitized). Replace with real GUIDs later.
+        const sanitizedName = (name ?? apiDevice?.name ?? 'device')
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '');
+        const id = apiDevice?.id ?? `${sanitizedName || 'device'}-${Date.now()}`;
+
         const devicePayload = {
+            id, // include id so server validation passes
             name,
             type,
             location,
@@ -79,9 +84,8 @@ export default function ConfigureDeviceModal({ open, apiDevice, onClose, onAdd }
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
             <div className="bg-white rounded-lg shadow-lg p-6 w-11/12 max-w-lg">
-                <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center mb-4">
                     <h3 className="text-lg font-semibold">Configure Device</h3>
-                    <button className="text-sm text-slate-500" onClick={onClose}>Close</button>
                 </div>
 
                 <div className="space-y-2">
