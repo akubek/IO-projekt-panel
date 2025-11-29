@@ -1,23 +1,39 @@
 import Dialog from "@mui/material/Dialog";
 import { useState } from "react";
 
-function validateLogin(username, password) {
-    // Funkcja waliduj¹ca dane logowania (testowa implementacja, bardzo prosta)
-    return username === "admin" && password === "admin";
-}
+
 export default function LoggingInOpen({ open, onClose, onLogin }) {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
 
-    function handleLogin() {
-        const ok = validateLogin(username, password);
-        if (ok) {
-            // je¿eli przekazano onLogin, wywo³aj go (rodzic zamknie modal i ustawi stan)
-            if (onLogin) {
-                onLogin();
-            } 
-        } else {
-            alert("Nieprawidlowe dane");
+    async function handleLogin() { // Funkcja musi byæ asynchroniczna
+        try {
+            const response = await fetch('/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ Username: username, Password: password }),
+            });
+
+            if (response.ok) {
+                // Logowanie udane (Backend zwróci³ 200 OK)
+                const data = await response.json(); // W przysz³oœci odczyt tokena JWT i roli
+
+                // Ustaw stan w komponencie nadrzêdnym (App.jsx)
+                if (onLogin) {
+                    onLogin();
+                }
+            } else if (response.status === 401) {
+                // Nieautoryzowany (Backend zwróci³ 401)
+                alert("Nieprawid³owe dane logowania (401 Unauthorized)");
+            } else {
+                // Inny b³¹d
+                alert("B³¹d serwera podczas logowania.");
+            }
+        } catch (error) {
+            console.error('Login API error:', error);
+            alert("B³¹d po³¹czenia z serwerem.");
         }
     }
 

@@ -55,6 +55,10 @@ export default defineConfig({
                 target,
                 secure: false
             },
+            '^/auth': {
+                target,
+                secure: false
+            }
         },
         port: parseInt(env.DEV_SERVER_PORT || '52795'),
         https: {

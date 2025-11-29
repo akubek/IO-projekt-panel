@@ -114,6 +114,12 @@ function App() {
                     </div>
                 </div>
             </div>
+            {/* Tekst widoczny tylko po zalogowaniu (Admin) */}
+            {isLoggedIn && (
+                <div className="w-full px-6 py-4 bg-red-100 border-l-4 border-red-500">
+                    <p className="text-red-700 font-bold">⚠️ Uwaga: Ten tekst widzą tylko zalogowani użytkownicy (ADMIN)! ⚠️</p>
+                </div>
+            )}
             {/* Wyświetlanie danych z tej "tabeli", najpierw normalnie potem w postaci kart */}
             <div>
             <h1 id="tableLabel"> Urzadzenia IoT</h1>
