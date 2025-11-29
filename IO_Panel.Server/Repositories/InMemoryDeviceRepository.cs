@@ -18,6 +18,7 @@ namespace IO_Panel.Server.Repositories
                 foreach (var d in seed)
                 {
                     _devices[d.Id] = d;
+                    _configs[d.Id] = d.Config;
                 }
             }
         }
@@ -69,6 +70,22 @@ namespace IO_Panel.Server.Repositories
                 device.Status = "Online";
                 return device;
             });
+
+            return Task.CompletedTask;
+        }
+
+        // Add or update device
+        public Task AddAsync(Device device, CancellationToken cancellation = default)
+        {
+            if (device == null) throw new ArgumentNullException(nameof(device));
+            if (string.IsNullOrWhiteSpace(device.Id)) device.Id = Guid.NewGuid().ToString();
+
+            _devices.AddOrUpdate(device.Id, device, (_, __) => device);
+
+            if (device.Config != null)
+            {
+                _configs[device.Id] = device.Config;
+            }
 
             return Task.CompletedTask;
         }

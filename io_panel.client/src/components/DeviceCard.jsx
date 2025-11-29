@@ -1,4 +1,4 @@
-export default function DeviceCard({ device, onSelect, onUpdate }) {
+export default function DeviceCard({ device }) {
 
     const cardColor = device.type === "Sensor" ? "bg-blue-100" : device.type === "Slider" ? "bg-green-100" : "bg-red-100";
 

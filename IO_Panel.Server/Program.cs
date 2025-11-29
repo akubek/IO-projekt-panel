@@ -3,9 +3,15 @@ using IO_Panel.Server.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// register typed HttpClient for external simulated devices API
+builder.Services.AddHttpClient<IDeviceApiClient, HttpDeviceApiClient>(client =>
+{
+    var baseUrl = builder.Configuration["DeviceApi:BaseUrl"] ?? "https://localhost:7075/";
+    client.BaseAddress = new Uri(baseUrl);
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
 
-// Przykładowe dane urządzeń, aktualnie stałe
+// seed sample devices
 var seedDevices =  new List<Device>
 {
     new Device { Id = "dev-1", Name = "Sensor A", Type = "Sensor", Status = "Online", LastSeen = DateTime.UtcNow.AddMinutes(-1), Localization = "Living room" },
@@ -13,10 +19,21 @@ var seedDevices =  new List<Device>
     new Device { Id = "dev-3", Name = "Thermometer C",  Type = "Slider", Status = "Online", LastSeen = DateTime.UtcNow.AddMinutes(-1), Localization = "Garage" }
 };
 
+// register config store (in-memory for now)
+builder.Services.AddSingleton<IDeviceConfigRepository, InMemoryDeviceConfigRepository>();
 
-builder.Services.AddSingleton<IDeviceRepository>(sp => new InMemoryDeviceRepository(seedDevices));
+// Development: keep seeded in-memory repo to preserve state across requests
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddSingleton<IDeviceRepository>(sp => new InMemoryDeviceRepository(seedDevices));
+}
+else
+{
+    // Production / integration: use DeviceRepository which composes IDeviceApiClient + IDeviceConfigRepository
+    builder.Services.AddScoped<IDeviceRepository, DeviceRepository>();
+}
+
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -25,7 +42,6 @@ var app = builder.Build();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -33,11 +49,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
 app.UseAuthorization();
-
 app.MapControllers();
-
 app.MapFallbackToFile("/index.html");
-
 app.Run();

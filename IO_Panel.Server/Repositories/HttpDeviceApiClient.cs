@@ -1,19 +1,46 @@
-using IO_Panel.Server.Repositories.Entities;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Net.Http.Json;
+using System.Threading;
+using System.Threading.Tasks;
+using IO_Panel.Server.Repositories.Entities;
+using Microsoft.Extensions.Logging;
 
 namespace IO_Panel.Server.Repositories
 {
     public class HttpDeviceApiClient : IDeviceApiClient
     {
         private readonly HttpClient _http;
+        private readonly ILogger<HttpDeviceApiClient> _logger;
 
-        public HttpDeviceApiClient(HttpClient http) => _http = http;
+        public HttpDeviceApiClient(HttpClient http, ILogger<HttpDeviceApiClient> logger)
+        {
+            _http = http;
+            _logger = logger;
+        }
 
         public async Task<IEnumerable<ApiDevice>> GetAllAsync(CancellationToken cancellation = default)
         {
-            var list = await _http.GetFromJsonAsync<IEnumerable<ApiDevice>>("api/devices", cancellation);
-            return list ?? Enumerable.Empty<ApiDevice>();
+            var url = new Uri(_http.BaseAddress!, "api/devices");
+            _logger.LogInformation("Calling external API: GET {Url}", url);
+            try
+            {
+                using var resp = await _http.GetAsync("api/devices", cancellation);
+                _logger.LogInformation("External API returned {StatusCode}", resp.StatusCode);
+                if (resp.StatusCode == HttpStatusCode.NotFound) return Enumerable.Empty<ApiDevice>();
+                resp.EnsureSuccessStatusCode();
+                var list = await resp.Content.ReadFromJsonAsync<IEnumerable<ApiDevice>>(cancellationToken : cancellation);
+                _logger.LogInformation("Deserialized {Count} devices from external API", list?.Count() ?? 0);
+                return list ?? Enumerable.Empty<ApiDevice>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error while calling external API /api/devices");
+                throw;
+            }
         }
 
         public async Task<ApiDevice?> GetByIdAsync(string id, CancellationToken cancellation = default)

@@ -4,29 +4,28 @@ using System.Threading;
 using System.Threading.Tasks;
 using IO_Panel.Server.Models;
 using IO_Panel.Server.Repositories;
+using IO_Panel.Server.Repositories.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
-//Próba stworzenia podstawowego kontrolera backendu do zarządzania urządzeniami IoT, aktualnie nie przyjmują żadnych komend, jedynie zwracana jest lista urządzeń przy GET
-//przy uruchamianiu strony oraz pojedyncze urządzenie przy GET /{id}
 namespace IO_Panel.Server.Controllers
 {
     [ApiController]
     [Route("[controller]")]
     public class DeviceController : ControllerBase
     {
-        //logger do logowania informacji, copilot dodał
         private readonly ILogger<DeviceController> _logger;
         private readonly IDeviceRepository _repo;
+        private readonly IDeviceApiClient _apiClient;
 
-        public DeviceController(ILogger<DeviceController> logger, IDeviceRepository repo)
+        public DeviceController(ILogger<DeviceController> logger, IDeviceRepository repo, IDeviceApiClient apiClient)
         {
             _logger = logger;
             _repo = repo;
+            _apiClient = apiClient;
         }
 
-        //metoda do pobierania listy urządzeń na endpoint /device, czyli uruchamiana automatycznie przy GET (początek uruchomienia strony)
         [HttpGet(Name = "GetDevices")]
         public async Task<ActionResult<IEnumerable<Device>>> Get(CancellationToken ct)
         {
@@ -34,7 +33,6 @@ namespace IO_Panel.Server.Controllers
             return Ok(devices);
         }
 
-        //metoda do pobierania pojedynczego urządzenia na endpoint /device/{id}
         [HttpGet("{id}")]
         public async Task<ActionResult<Device>> Get(string id, CancellationToken ct)
         {
@@ -43,13 +41,30 @@ namespace IO_Panel.Server.Controllers
             return Ok(device);
         }
 
-        //metoda do wysyłania komend do urządzenia na endpoint /device/{id}/command
+        // Return devices from the external API
+        [HttpGet("external")]
+        public async Task<ActionResult<IEnumerable<ApiDevice>>> GetExternal(CancellationToken ct)
+        {
+            var list = await _apiClient.GetAllAsync(ct);
+            return Ok(list);
+        }
+
+        // Create / add configured device
+        [HttpPost]
+        public async Task<ActionResult<Device>> Create([FromBody] Device device, CancellationToken ct)
+        {
+            if (device is null) return BadRequest();
+            if (string.IsNullOrWhiteSpace(device.Id)) device.Id = Guid.NewGuid().ToString();
+
+            await _repo.AddAsync(device, ct);
+
+            return CreatedAtAction(nameof(Get), new { id = device.Id }, device);
+        }
+
         [HttpPost("{id}/command")]
         public ActionResult SendCommand(string id, [FromBody] CommandDto cmd)
         {
-            // Tutaj komendy do urządzeń, np włącz wyłącz itp.
-            // Na razie zwracamy tylko symulację przyjęcia
-            return Accepted(new { deviceId = id, command = cmd.Command, status = "queued" }); //copilot dodał
+            return Accepted(new { deviceId = id, command = cmd.Command, status = "queued" });
         }
 
         [HttpPost("{id}/state")]
@@ -78,10 +93,10 @@ namespace IO_Panel.Server.Controllers
             }
         }
 
-        public record CommandDto //Struktura komendy do urządzenia
+        public record CommandDto
         {
             public string Command { get; init; } = default!;
-            public string? Payload { get; init; } //Nie wiem co to, copilot to dodał
+            public string? Payload { get; init; }
         }
     }
 }

@@ -1,29 +1,86 @@
 ﻿import { useEffect, useState } from 'react';
 import './App.css';
-import DeviceCard from './components/DeviceCard'; //importowanie komponentu DeviceCard
-import LoggingInOpen from './components/LoggingInOpen'; //importowanie komponentu LoggingInOpen
-
+import DeviceCard from './components/DeviceCard';
+import LoggingInOpen from './components/LoggingInOpen';
+import AddDeviceModal from './components/AddDeviceModal';
+import ConfigureDeviceModal from './components/ConfigureDeviceModal';
 import { Plus, Cpu, User } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
 import Button from "@mui/material/Button";
 import { CircleDot } from "lucide-react";
 
-
-//Próba połączenia frontu z backendem i wypisywania urządzeń z backendu, bazowane na przykładzie z weatherforecast
 function App() {
     const [devices, setDevices] = useState([]);
-    const [selectedDevice, setSelectedDevice] = useState(null);
+    const [_selectedDevice, setSelectedDevice] = useState(null);
     const [loggingIn, setLoggingIn] = useState(false);
-
-    // nowy stan: czy użytkownik jest zalogowany
     const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-    //Use effect, potrzebne do pobierania danych z backendu
+    // Add-device modal state
+    const [showAddModal, setShowAddModal] = useState(false);
+    const [externalDevices, setExternalDevices] = useState([]);
+
+    // Configure modal
+    const [showConfigureModal, setShowConfigureModal] = useState(false);
+    const [deviceToConfigure, setDeviceToConfigure] = useState(null);
+
     useEffect(() => {
-        populateDeviceData();
+        let mounted = true;
+        (async () => {
+            try {
+                const response = await fetch('/device');
+                if (!mounted) return;
+                if (response.ok) {
+                    const data = await response.json();
+                    setDevices(data);
+                }
+            } catch {
+                if (!mounted) return;
+                setDevices([]);
+            }
+        })();
+        return () => { mounted = false; };
     }, []);
 
-    //Pobieranie danych z backendu i zapisywanie ich w "tabeli"
+    async function openAddModal() {
+        setShowAddModal(true);
+        try {
+            const res = await fetch('/device/external');
+            if (res.ok) {
+                const data = await res.json();
+                setExternalDevices(data);
+            } else {
+                setExternalDevices([]);
+            }
+        } catch {
+            setExternalDevices([]);
+        }
+    }
+
+    function closeAddModal() {
+        setShowAddModal(false);
+        setExternalDevices([]);
+    }
+
+    // Called when user clicks a row in AddDeviceModal
+    function handleSelectExternalDevice(apiDevice) {
+        console.log('selected', apiDevice);
+        setDeviceToConfigure(apiDevice);
+        setShowAddModal(false);
+        setShowConfigureModal(true);
+    }
+
+    // Called when ConfigureDeviceModal confirms Add
+    function handleAddDevice(newDevice) {
+        setDevices(prev => [...prev, newDevice]);
+        setShowConfigureModal(false);
+        setDeviceToConfigure(null);
+    }
+
+    function closeConfigureModal() {
+        setShowConfigureModal(false);
+        setDeviceToConfigure(null);
+    }
+
     const contents = devices === undefined
         ? <p><em>Loading...</em></p>
         : <table className="table table-striped" aria-labelledby="tableLabel">
@@ -51,10 +108,9 @@ function App() {
             </tbody>
         </table>;
 
-    //Wyświetlanie
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
-        {/* Header */}
+            {/* Header */}
             <div className="border-b border-slate-200 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
                 <div className="w-full px-6 py-6">
                     <div className="flex items-center justify-between">
@@ -68,7 +124,6 @@ function App() {
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
-                            {/* status label po lewej od przycisków */}
                             <div className="hidden sm:flex items-center gap-2">
                                 <div
                                     className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium shadow-sm border ${isLoggedIn
@@ -85,20 +140,11 @@ function App() {
                                 </div>
                             </div>
 
-                            {isLoggedIn ? (
-                                <Button className="bg-gradient-to-r !text-white from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 shadow-lg">
-                                    <Plus className="w-4 h-4 mr-2" />
-                                    Add Device
-                                </Button>
-                            ) : (
-                                    <Button className="bg-gradient-to-r !text-white from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 shadow-lg">
-                                    <Plus className="w-4 h-4 mr-2" />
-                                    Add Device
-                                 </Button>
-                            )}
+                            <Button onClick={openAddModal} className="bg-gradient-to-r !text-white from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 shadow-lg">
+                                <Plus className="w-4 h-4 mr-2" />
+                                Add Device
+                            </Button>
 
-
-                            {/* pokazuj Log in gdy niezalogowany, Logout gdy zalogowany */}
                             {!isLoggedIn ? (
                                 <Button className="bg-gradient-to-r !text-white from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 shadow-lg" onClick={() => setLoggingIn(true)}>
                                     <User className="w-4 h-4 mr-2" />
@@ -114,9 +160,9 @@ function App() {
                     </div>
                 </div>
             </div>
-            {/* Wyświetlanie danych z tej "tabeli", najpierw normalnie potem w postaci kart */}
+
             <div>
-            <h1 id="tableLabel"> Urzadzenia IoT</h1>
+                <h1 id="tableLabel"> Urzadzenia IoT</h1>
                 <p>Testowa lista urzadzen do porownania z kartami urzadzen</p>
                 {contents}
                 <p>Testowa lista urzadzen w postaci kart</p>
@@ -125,28 +171,32 @@ function App() {
                         <DeviceCard
                             key={device.id}
                             device={device}
-                            onSelect={() => setSelectedDevice(device)}/>
+                            onSelect={() => setSelectedDevice(device)} />
                     ))}
                 </div>
             </div>
 
-            {/* przekazujemy onLogin do komponentu logowania */}
             <LoggingInOpen
                 open={loggingIn}
                 onClose={() => setLoggingIn(false)}
                 onLogin={() => { setIsLoggedIn(true); setLoggingIn(false); }}
             />
+
+            <AddDeviceModal
+                open={showAddModal}
+                devices={externalDevices}
+                onClose={closeAddModal}
+                onSelect={handleSelectExternalDevice}
+            />
+
+            <ConfigureDeviceModal
+                open={showConfigureModal}
+                apiDevice={deviceToConfigure}
+                onClose={closeConfigureModal}
+                onAdd={handleAddDevice}
+            />
         </div>
     );
-
-    //Pobieranie danych z backendu!!!
-    async function populateDeviceData() {
-        const response = await fetch('/device');
-        if (response.ok) {
-            const data = await response.json();
-            setDevices(data);
-        }
-    }
 }
 
 export default App;

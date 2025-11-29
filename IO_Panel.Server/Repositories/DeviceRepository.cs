@@ -37,7 +37,7 @@ namespace IO_Panel.Server.Repositories
                                 ? $"{api.Name ?? "unknown"}:{api.Location ?? "unknown"}"
                                 : Guid.NewGuid().ToString());
 
-                var domain = DeviceMapper.ToDomain(api,id);
+                var domain = DeviceMapper.ToDomain(api, id);
                 return (Id: id, Domain: domain);
             }).ToList();
 
@@ -181,7 +181,8 @@ namespace IO_Panel.Server.Repositories
         public Task SaveConfigAsync(string deviceId, DeviceConfig config, CancellationToken cancellation = default) =>
             _configRepo.SaveConfigAsync(deviceId, config, cancellation);
 
-        public async Task RequestStateChangeAsync(string deviceId, DeviceState newState, CancellationToken cancellation = default)
+        // Ensure this method matches the interface signature exactly
+        public async Task RequestStateChangeAsync(string deviceId, DeviceState newState, CancellationToken cancellation)
         {
             // Convert domain -> API state
             var apiState = new ApiDeviceState { Value = newState.Value, Unit = newState.Unit };
@@ -233,6 +234,17 @@ namespace IO_Panel.Server.Repositories
             _logger.LogWarning("Timed out waiting for device '{DeviceId}' to reach requested state (value={Value}, unit={Unit})",
                 deviceId, newState.Value, newState.Unit);
             throw new TimeoutException($"Timed out waiting for device '{deviceId}' to reach requested state.");
+        }
+
+        public async Task AddAsync(Device device, CancellationToken cancellation = default)
+        {
+            // Persist the device config if available
+            if (device.Config != null)
+            {
+                await _configRepo.SaveConfigAsync(device.Id, device.Config, cancellation).ConfigureAwait(false);
+            }
+            // Optionally, you could also send the device to the API if needed
+            // For now, just persist config as a minimal implementation
         }
 
         private static string? TryGetApiId(ApiDevice api)
