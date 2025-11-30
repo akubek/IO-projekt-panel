@@ -1,5 +1,6 @@
 ﻿using IO_Panel.Server.Models;
 using IO_Panel.Server.Repositories;
+using Microsoft.AspNetCore.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -37,6 +38,9 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Register PasswordHasher for AdminUser
+builder.Services.AddSingleton<IPasswordHasher<AdminUser>, PasswordHasher<AdminUser>>();
+
 var app = builder.Build();
 
 app.UseDefaultFiles();
@@ -53,3 +57,4 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapFallbackToFile("/index.html");
 app.Run();
+

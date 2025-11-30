@@ -6,7 +6,7 @@ export default function LoggingInOpen({ open, onClose, onLogin }) {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
 
-    async function handleLogin() { // Funkcja musi byæ asynchroniczna
+    async function handleLogin() {
         try {
             const response = await fetch('/auth/login', {
                 method: 'POST',
@@ -17,23 +17,19 @@ export default function LoggingInOpen({ open, onClose, onLogin }) {
             });
 
             if (response.ok) {
-                // Logowanie udane (Backend zwróci³ 200 OK)
-                const data = await response.json(); // W przysz³oœci odczyt tokena JWT i roli
+                const data = await response.json(); // Instead use JWT token in the future
 
-                // Ustaw stan w komponencie nadrzêdnym (App.jsx)
                 if (onLogin) {
                     onLogin();
                 }
             } else if (response.status === 401) {
-                // Nieautoryzowany (Backend zwróci³ 401)
-                alert("Nieprawid³owe dane logowania (401 Unauthorized)");
+                alert("Invalid username or password.");
             } else {
-                // Inny b³¹d
-                alert("B³¹d serwera podczas logowania.");
+                alert("Server error during login.");
             }
         } catch (error) {
             console.error('Login API error:', error);
-            alert("B³¹d po³¹czenia z serwerem.");
+            alert("Server connection error.");
         }
     }
 
