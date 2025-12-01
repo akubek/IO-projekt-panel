@@ -8,6 +8,7 @@ import { Plus, Cpu, User } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
 import Button from "@mui/material/Button";
 import { CircleDot } from "lucide-react";
+import { motion } from "framer-motion"
 
 
 //Próba połączenia frontu z backendem i wypisywania urządzeń z backendu, bazowane na przykładzie z weatherforecast
@@ -131,10 +132,19 @@ function App() {
                                 </div>
                             </div>
 
-                            <Button onClick={openAddModal} className="bg-gradient-to-r !text-white from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 shadow-lg">
-                                <Plus className="w-4 h-4 mr-2" />
-                                Add Device
-                            </Button>
+                            {!isLoggedIn ? (
+                                <Button className="bg-gradient-to-r !text-white from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 shadow-lg">
+                                    <Plus className="w-4 h-4 mr-2" />
+                                    Add Device
+                                </Button>
+                            ) : (
+                                <Button onClick={openAddModal} className="bg-gradient-to-r !text-white from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 shadow-lg">
+                                    <Plus className="w-4 h-4 mr-2" />
+                                    Add Device
+                                </Button>
+                            )}
+
+
 
                             {!isLoggedIn ? (
                                 <Button className="bg-gradient-to-r !text-white from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 shadow-lg" onClick={() => setLoggingIn(true)}>
@@ -158,20 +168,18 @@ function App() {
                 </div>
             )}
             {/* Wyświetlanie danych z tej "tabeli", najpierw normalnie potem w postaci kart */}
-            <div>
-                <h1 id="tableLabel"> Urzadzenia IoT</h1>
-                <p>Testowa lista urzadzen do porownania z kartami urzadzen</p>
-                {contents}
-                <p>Testowa lista urzadzen w postaci kart</p>
-                <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {devices.map((device) => (
-                        <DeviceCard
-                            key={device.id}
-                            device={device}
-                            onSelect={() => setSelectedDevice(device)} />
-                    ))}
-                </div>
-            </div>
+                <motion.div
+                    layout
+                    className="mt-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <AnimatePresence mode="popLayout">
+                        {devices.map((device) => (
+                            <DeviceCard
+                                key={device.id}
+                                device={device}
+                                onSelect={() => setSelectedDevice(device)} />)
+                        )}
+                    </AnimatePresence>
+                </motion.div>
 
             <LoggingInOpen
                 open={loggingIn}
