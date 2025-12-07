@@ -1,4 +1,5 @@
 import Dialog from "@mui/material/Dialog";
+import Button from "@mui/material/Button";
 import { useState } from "react";
 
 
@@ -55,11 +56,11 @@ export default function LoggingInOpen({ open, onClose, onLogin }) {
                         className="w-full mb-4 px-3 py-2 border border-gray-200 rounded"
                     />
                     <div className="flex justify-end">
-                        <button className="px-4 py-2 bg-gray-200 rounded" onClick={handleLogin}>Log In</button>
+                        <Button className="px-4 py-2 bg-gray-200 rounded" onClick={handleLogin}>Log In</Button>
                     </div>
 
                     <div className="flex justify-end">
-                        <button className="px-4 py-2 bg-gray-200 rounded" onClick={() => onClose()}>Return</button>
+                        <Button className="px-4 py-2 bg-gray-200 rounded" onClick={() => onClose()}>Return</Button>
                     </div>
                 </div>
             </div>
