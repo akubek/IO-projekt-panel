@@ -8,6 +8,8 @@ using IO_Panel.Server.Repositories.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using MassTransit;
+using IO_Panel.Server.Contracts;
 
 namespace IO_Panel.Server.Controllers
 {
@@ -18,12 +20,14 @@ namespace IO_Panel.Server.Controllers
         private readonly ILogger<DeviceController> _logger;
         private readonly IDeviceRepository _repo;
         private readonly IDeviceApiClient _apiClient;
+        private readonly IPublishEndpoint _publishEndpoint;
 
-        public DeviceController(ILogger<DeviceController> logger, IDeviceRepository repo, IDeviceApiClient apiClient)
+        public DeviceController(ILogger<DeviceController> logger, IDeviceRepository repo, IDeviceApiClient apiClient, IPublishEndpoint publishEndpoint)
         {
             _logger = logger;
             _repo = repo;
             _apiClient = apiClient;
+            _publishEndpoint = publishEndpoint;
         }
 
         [HttpGet(Name = "GetDevices")]
@@ -70,27 +74,26 @@ namespace IO_Panel.Server.Controllers
         [HttpPost("{id}/state")]
         public async Task<ActionResult> SetState(string id, [FromBody] DeviceState state, CancellationToken ct)
         {
-            try
+            if (!Guid.TryParse(id, out var deviceIdGuid))
             {
-                await _repo.RequestStateChangeAsync(id, state, ct);
-                return Accepted(new { deviceId = id, state });
+                return BadRequest("Device ID must be a valid GUID.");
             }
-            catch (KeyNotFoundException)
+
+            // Create the command object based on the shared contract
+            var command = new SetDeviceStateCommand
             {
-                return NotFound();
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Conflict(new { error = ex.Message });
-            }
-            catch (OperationCanceledException)
-            {
-                return StatusCode(499);
-            }
-            catch (Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError);
-            }
+                DeviceId = deviceIdGuid,
+                Value = state.Value,
+                Unit = state.Unit
+            };
+
+            // Publish the command to the message bus
+            await _publishEndpoint.Publish(command, ct);
+
+            _logger.LogInformation("Published SetDeviceStateCommand for DeviceId {DeviceId}", id);
+
+            // Return 'Accepted' to indicate the command has been queued for processing
+            return Accepted(new { deviceId = id, state });
         }
 
         public record CommandDto

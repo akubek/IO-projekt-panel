@@ -26,9 +26,16 @@ namespace IO_Panel.Server.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create(Room room)
+        public async Task<IActionResult> Create([FromBody] Room room)
         {
+            if (room == null)
+            {
+                return BadRequest();
+            }
+            // 2. It calls the AddAsync method on the injected repository
             await _roomRepo.AddAsync(room);
+            
+            // 3. It returns a "201 Created" response, confirming success
             return CreatedAtAction(nameof(GetById), new { id = room.Id }, room);
         }
 
