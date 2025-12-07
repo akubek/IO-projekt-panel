@@ -4,27 +4,52 @@ namespace IO_Panel.Server.Repositories.Entities
 {
     public class ApiDevice
     {
-        public string? Name { get; set; }
-        public string? Type { get; set; }
-        public string? Location { get; set; }
-        public string? Description { get; set; }
+        [JsonPropertyName("id")]
+        public string Id { get; set; } = string.Empty;
+
+        [JsonPropertyName("name")]
+        public string Name { get; set; } = string.Empty;
+
+        [JsonPropertyName("type")]
+        public string Type { get; set; } = string.Empty;
+
+        [JsonPropertyName("state")]
         public ApiDeviceState? State { get; set; }
+
+        [JsonPropertyName("config")]
         public ApiDeviceConfig? Config { get; set; }
+
+        [JsonPropertyName("location")]
+        public string? Location { get; set; }
+
+        [JsonPropertyName("description")]
+        public string? Description { get; set; }
+
+        [JsonPropertyName("createdAt")]
+        public DateTimeOffset? CreatedAt { get; set; }
     }
 
     public class ApiDeviceState
     {
+        [JsonPropertyName("value")]
         public double Value { get; set; }
+
+        [JsonPropertyName("unit")]
         public string? Unit { get; set; }
     }
 
     public class ApiDeviceConfig
     {
-        [JsonPropertyName("readonly")]
-        public bool ReadOnly { get; set; }
+        [JsonPropertyName("min")]
+        public double? Min { get; set; }
 
-        public double Min { get; set; }
-        public double Max { get; set; }
-        public double Step { get; set; }
+        [JsonPropertyName("max")]
+        public double? Max { get; set; }
+
+        [JsonPropertyName("step")]
+        public double? Step { get; set; }
+
+        [JsonPropertyName("readonly")]
+        public bool Readonly { get; set; }
     }
 }

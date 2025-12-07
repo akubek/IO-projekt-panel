@@ -20,6 +20,10 @@ namespace IO_Panel.Server.Models
         public string Status { get; set; } = "Unknown";   // e.g. Online/Offline
         public string? Localization { get; set; }          // if different naming is needed
 
+        // metadata from API
+        // maps to ApiDevice.createdAt
+        public DateTimeOffset? CreatedAt { get; set; }
+
         // Whether this device has been configured
         public bool IsConfigured { get; set; } = false;
     }

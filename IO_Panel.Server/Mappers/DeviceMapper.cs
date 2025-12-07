@@ -22,13 +22,15 @@ namespace IO_Panel.Server.Mappers
                 },
                 Config = new DeviceConfig
                 {
-                    ReadOnly = api.Config?.ReadOnly ?? false,
+                    // ApiDeviceConfig exposes "Readonly" while domain uses "ReadOnly"
+                    ReadOnly = api.Config?.Readonly ?? false,
                     Min = api.Config?.Min ?? 0,
                     Max = api.Config?.Max ?? 0,
                     Step = api.Config?.Step ?? 0
                 },
                 LastSeen = lastSeen ?? DateTime.UtcNow,
-                Status = "Unknown"
+                Status = "Unknown",
+                CreatedAt = api.CreatedAt
             };
         }
 
@@ -42,7 +44,8 @@ namespace IO_Panel.Server.Mappers
                 Location = d.Location,
                 Description = d.Description,
                 State = new ApiDeviceState { Value = d.State.Value, Unit = d.State.Unit },
-                Config = new ApiDeviceConfig { ReadOnly = d.Config.ReadOnly, Min = d.Config.Min, Max = d.Config.Max, Step = d.Config.Step }
+                Config = new ApiDeviceConfig { Readonly = d.Config.ReadOnly, Min = d.Config.Min, Max = d.Config.Max, Step = d.Config.Step },
+                CreatedAt = d.CreatedAt
             };
         }
     }

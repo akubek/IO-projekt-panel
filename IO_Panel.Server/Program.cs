@@ -12,27 +12,7 @@ builder.Services.AddHttpClient<IDeviceApiClient, HttpDeviceApiClient>(client =>
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 
-// seed sample devices
-var seedDevices =  new List<Device>
-{
-    new Device { Id = "dev-1", Name = "Sensor A", Type = "sensor", Status = "Online", LastSeen = DateTime.UtcNow.AddMinutes(-1), Localization = "Living room", Description = "Temperature sensor", State = new DeviceState { Value = 22.5, Unit = "°C" }, Config = new DeviceConfig { ReadOnly = true, Min = -40, Max = 125, Step = 0.1 }, IsConfigured = true },
-    new Device { Id = "dev-2", Name = "Lamp B",  Type = "switch", Status = "Offline", LastSeen = DateTime.UtcNow.AddHours(-1), Localization = "Kitchen", Description = "Ceiling lamp", State = new DeviceState { Value = 0, Unit = null }, Config = new DeviceConfig { ReadOnly = false, Min = 0, Max = 1, Step = 1 }, IsConfigured = false },
-    new Device { Id = "dev-3", Name = "Thermometer C",  Type = "slider", Status = "Online", LastSeen = DateTime.UtcNow.AddMinutes(-1), Localization = "Garage", Description = "Setpoint control", State = new DeviceState { Value = 50, Unit = "%" }, Config = new DeviceConfig { ReadOnly = false, Min = 0, Max = 100, Step = 1 }, IsConfigured = true }
-};
-
-// register config store (in-memory for now)
-builder.Services.AddSingleton<IDeviceConfigRepository, InMemoryDeviceConfigRepository>();
-
-// Development: keep seeded in-memory repo to preserve state across requests
-if (builder.Environment.IsDevelopment())
-{
-    builder.Services.AddSingleton<IDeviceRepository>(sp => new InMemoryDeviceRepository(seedDevices));
-}
-else
-{
-    // Production / integration: use DeviceRepository which composes IDeviceApiClient + IDeviceConfigRepository
-    builder.Services.AddScoped<IDeviceRepository, DeviceRepository>();
-}
+builder.Services.AddSingleton<IDeviceRepository, DeviceRepository>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -42,6 +22,27 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton<IPasswordHasher<AdminUser>, PasswordHasher<AdminUser>>();
 
 var app = builder.Build();
+
+// Seed the repository with sample device configs for development
+if (app.Environment.IsDevelopment())
+{
+    using (var scope = app.Services.CreateScope())
+    {
+        var repo = scope.ServiceProvider.GetRequiredService<IDeviceRepository>();
+        var seedDevices = new List<Device>
+        {
+            new Device { Id = "dev-1", Name = "Sensor A", Type = "sensor", Status = "Online", LastSeen = DateTime.UtcNow.AddMinutes(-1), Localization = "Living room", Description = "Temperature sensor", State = new DeviceState { Value = 22.5, Unit = "°C" }, Config = new DeviceConfig { ReadOnly = true, Min = -40, Max = 125, Step = 0.1 }, IsConfigured = true },
+            new Device { Id = "dev-2", Name = "Lamp B",  Type = "switch", Status = "Offline", LastSeen = DateTime.UtcNow.AddHours(-1), Localization = "Kitchen", Description = "Ceiling lamp", State = new DeviceState { Value = 0, Unit = null }, Config = new DeviceConfig { ReadOnly = false, Min = 0, Max = 1, Step = 1 }, IsConfigured = false },
+            new Device { Id = "dev-3", Name = "Thermometer C",  Type = "slider", Status = "Online", LastSeen = DateTime.UtcNow.AddMinutes(-1), Localization = "Garage", Description = "Setpoint control", State = new DeviceState { Value = 50, Unit = "%" }, Config = new DeviceConfig { ReadOnly = false, Min = 0, Max = 100, Step = 1 }, IsConfigured = true }
+        };
+
+        foreach (var d in seedDevices)
+        {
+            try { repo.SaveConfigAsync(d.Id, d.Config).GetAwaiter().GetResult(); } catch { }
+        }
+    }
+}
+
 
 app.UseDefaultFiles();
 app.UseStaticFiles();

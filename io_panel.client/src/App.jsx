@@ -72,6 +72,7 @@ function App() {
         setDeviceToConfigure(null);
     }
 
+    /*
     const contents = devices === undefined
         ? <p><em>Loading...</em></p>
         : <table className="table table-striped" aria-labelledby="tableLabel">
@@ -98,6 +99,7 @@ function App() {
                 )}
             </tbody>
         </table>;
+        */
 
     //Wyświetlanie
     return (

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -12,14 +13,15 @@ namespace IO_Panel.Server.Repositories
     public class DeviceRepository : IDeviceRepository
     {
         private readonly IDeviceApiClient _api;
-        private readonly IDeviceConfigRepository _configRepo;
         private readonly ILogger<DeviceRepository> _logger;
         private const double StateEqualityEpsilon = 1e-6;
 
-        public DeviceRepository(IDeviceApiClient api, IDeviceConfigRepository configRepo, ILogger<DeviceRepository> logger)
+        // In-memory store for configs, replacing the separate repository
+        private readonly ConcurrentDictionary<string, DeviceConfig> _configs = new();
+
+        public DeviceRepository(IDeviceApiClient api, ILogger<DeviceRepository> logger)
         {
             _api = api;
-            _configRepo = configRepo;
             _logger = logger;
         }
 
@@ -29,60 +31,44 @@ namespace IO_Panel.Server.Repositories
             var apiList = await _api.GetAllAsync(cancellation).ConfigureAwait(false);
 
             // map API -> domain devices and compute stable ids
-            var apiEntries = apiList.Select(api =>
+            var apiEntries = new List<(string Id, Device Domain)>();
+            foreach (var api in apiList)
             {
-                // compute id the same way as before
-                string id = TryGetApiId(api)
-                            ?? (!string.IsNullOrWhiteSpace(api.Name) || !string.IsNullOrWhiteSpace(api.Location)
-                                ? $"{api.Name ?? "unknown"}:{api.Location ?? "unknown"}"
-                                : Guid.NewGuid().ToString());
+                cancellation.ThrowIfCancellationRequested();
+
+                // require an explicit id from API;
+                var id = TryGetApiId(api);
+                if (string.IsNullOrEmpty(id))
+                {
+                    _logger.LogError("External API returned a device without an 'id' (name='{Name}', location='{Location}'). Skipping device.", api?.Name, api?.Location);
+                    continue; // skip devices that don't supply an id
+                }
 
                 var domain = DeviceMapper.ToDomain(api, id);
-                return (Id: id, Domain: domain);
-            }).ToList();
+                apiEntries.Add((Id: id, Domain: domain));
+            }
 
             // 2) load configs for reported devices concurrently (best-effort)
             var loadTasks = apiEntries.Select(async e =>
             {
                 cancellation.ThrowIfCancellationRequested();
-                try
+                var persisted = await GetConfigAsync(e.Id, cancellation).ConfigureAwait(false);
+                if (persisted != null)
                 {
-                    var persisted = await _configRepo.LoadConfigAsync(e.Id, cancellation).ConfigureAwait(false);
-                    if (persisted != null)
-                    {
-                        e.Domain.Config = persisted;
-                        e.Domain.IsConfigured = true;
-                    }
-                    else
-                    {
-                        e.Domain.IsConfigured = false;
-                    }
+                    e.Domain.Config = persisted;
+                    e.Domain.IsConfigured = true;
                 }
-                catch (OperationCanceledException) { throw; }
-                catch (Exception ex)
+                else
                 {
-                    _logger.LogWarning(ex, "Failed to load config for device '{DeviceId}' from config store", e.Id);
                     e.Domain.IsConfigured = false;
                 }
-
                 return e.Domain;
             });
 
             var reportedDevices = (await Task.WhenAll(loadTasks).ConfigureAwait(false)).ToList();
 
             // 3) find persisted (remembered) device ids that are not reported by the API -> disconnected
-            IEnumerable<string> persistedIds;
-            try
-            {
-                persistedIds = await _configRepo.GetAllDeviceIdsAsync(cancellation).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to enumerate persisted device ids");
-                persistedIds = Array.Empty<string>();
-            }
-
+            var persistedIds = await GetAllDeviceIdsAsync(cancellation).ConfigureAwait(false);
             var reportedIds = new HashSet<string>(reportedDevices.Select(d => d.Id));
             var disconnected = new List<Device>();
 
@@ -93,7 +79,7 @@ namespace IO_Panel.Server.Repositories
 
                 try
                 {
-                    var cfg = await _configRepo.LoadConfigAsync(pid, cancellation).ConfigureAwait(false);
+                    var cfg = await GetConfigAsync(pid, cancellation).ConfigureAwait(false);
                     var d = new Device
                     {
                         Id = pid,
@@ -128,60 +114,49 @@ namespace IO_Panel.Server.Repositories
             if (api == null)
             {
                 // If API does not report device, but we have a persisted config, return a "disconnected" remembered device
-                try
+                var persisted = await GetConfigAsync(id, cancellation).ConfigureAwait(false);
+                if (persisted != null)
                 {
-                    var persisted = await _configRepo.LoadConfigAsync(id, cancellation).ConfigureAwait(false);
-                    if (persisted != null)
+                    return new Device
                     {
-                        return new Device
-                        {
-                            Id = id,
-                            Name = id,
-                            Type = string.Empty,
-                            Location = string.Empty,
-                            Description = "Remembered, not reported by API",
-                            State = new DeviceState { Value = 0, Unit = null },
-                            Config = persisted,
-                            LastSeen = DateTime.MinValue,
-                            Status = "Disconnected",
-                            IsConfigured = true
-                        };
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Failed to load persisted config for missing device '{DeviceId}'", id);
+                        Id = id,
+                        Name = id,
+                        Type = string.Empty,
+                        Location = string.Empty,
+                        Description = "Remembered, not reported by API",
+                        State = new DeviceState { Value = 0, Unit = null },
+                        Config = persisted,
+                        LastSeen = DateTime.MinValue,
+                        Status = "Disconnected",
+                        IsConfigured = true
+                    };
                 }
 
                 return null;
             }
 
-            var domain = DeviceMapper.ToDomain(api,id);
-            try
+            var domain = DeviceMapper.ToDomain(api, id);
+            var domainConfig = await GetConfigAsync(id, cancellation).ConfigureAwait(false);
+            if (domainConfig != null)
             {
-                var persisted = await _configRepo.LoadConfigAsync(id, cancellation).ConfigureAwait(false);
-                if (persisted != null)
-                {
-                    domain.Config = persisted;
-                    domain.IsConfigured = true;
-                }
+                domain.Config = domainConfig;
+                domain.IsConfigured = true;
             }
-            catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to load persisted config for device '{DeviceId}'", id);
-            }
-
             return domain;
         }
 
         public Task<DeviceConfig?> GetConfigAsync(string deviceId, CancellationToken cancellation = default) =>
-            _configRepo.LoadConfigAsync(deviceId, cancellation);
+            Task.FromResult(_configs.TryGetValue(deviceId, out var cfg) ? cfg : null);
 
-        public Task SaveConfigAsync(string deviceId, DeviceConfig config, CancellationToken cancellation = default) =>
-            _configRepo.SaveConfigAsync(deviceId, config, cancellation);
+        public Task SaveConfigAsync(string deviceId, DeviceConfig config, CancellationToken cancellation = default)
+        {
+            _configs[deviceId] = config;
+            return Task.CompletedTask;
+        }
 
-        // Ensure this method matches the interface signature exactly
+        public Task<IEnumerable<string>> GetAllDeviceIdsAsync(CancellationToken cancellation = default) =>
+            Task.FromResult<IEnumerable<string>>(_configs.Keys);
+
         public async Task RequestStateChangeAsync(string deviceId, DeviceState newState, CancellationToken cancellation)
         {
             // Convert domain -> API state
@@ -212,7 +187,7 @@ namespace IO_Panel.Server.Repositories
                         // Optionally refresh persisted config (best-effort)
                         try
                         {
-                            var persisted = await _configRepo.LoadConfigAsync(deviceId, cancellation).ConfigureAwait(false);
+                            var persisted = await GetConfigAsync(deviceId, cancellation).ConfigureAwait(false);
                             if (persisted != null)
                             {
                                 // nothing stored in-memory here, but we ensure config repository is reachable
@@ -241,10 +216,8 @@ namespace IO_Panel.Server.Repositories
             // Persist the device config if available
             if (device.Config != null)
             {
-                await _configRepo.SaveConfigAsync(device.Id, device.Config, cancellation).ConfigureAwait(false);
+                await SaveConfigAsync(device.Id, device.Config, cancellation).ConfigureAwait(false);
             }
-            // Optionally, you could also send the device to the API if needed
-            // For now, just persist config as a minimal implementation
         }
 
         private static string? TryGetApiId(ApiDevice api)
