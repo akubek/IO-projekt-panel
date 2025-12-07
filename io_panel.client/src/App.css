@@ -6,6 +6,16 @@
     color-scheme: light;
 }
 
+button, input, select, textarea {
+    -webkit-appearance: none; /* usuwa natywne style przeglądarki dla tych elementów*/
+    appearance: none;
+}
+
+body {
+    color: #000000;
+    background-color: #ffffff;
+}
+
 th, td {
     padding-left: 1rem;
     padding-right: 1rem;

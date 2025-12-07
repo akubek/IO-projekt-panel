@@ -5,7 +5,7 @@
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: light dark;
+  color-scheme: light;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -33,6 +33,10 @@ body {
 h1 {
   font-size: 3.2em;
   line-height: 1.1;
+}
+
+html {
+    color-scheme: light;
 }
 
 button {
