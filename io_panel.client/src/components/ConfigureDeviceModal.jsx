@@ -123,7 +123,7 @@ export default function ConfigureDeviceModal({ open, apiDevice, onClose, onAdd }
 
                 <div className="mt-4 flex justify-end gap-2">
                     <button className="px-4 py-2 bg-slate-100 rounded" onClick={onClose} disabled={saving}>Cancel</button>
-                    <button className="px-4 py-2 bg-blue-600 text-white rounded" onClick={handleAdd} disabled={saving}>
+                    <button className="px-4 py-2 bg-blue-600 text-black rounded" onClick={handleAdd} disabled={saving}>
                         {saving ? 'Adding...' : 'Add device'}
                     </button>
                 </div>

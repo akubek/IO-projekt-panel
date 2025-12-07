@@ -8,21 +8,21 @@ import { Power, Gauge, Activity, MapPin } from "lucide-react";
 import clsx from "clsx";
 
 const deviceTypeConfig = {
-    Switch: {
+    switch: {
         icon: Power,
         color: "from-blue-500 to-blue-600",
         bgLight: "bg-blue-50",
         textColor: "text-blue-700",
         borderColor: "border-blue-200"
     },
-    Slider: {
+    slider: {
         icon: Gauge,
         color: "from-purple-500 to-purple-600",
         bgLight: "bg-purple-50",
         textColor: "text-purple-700",
         borderColor: "border-purple-200"
     },
-    Sensor: {
+    sensor: {
         icon: Activity,
         color: "from-green-500 to-green-600",
         bgLight: "bg-green-50",
@@ -34,7 +34,7 @@ const deviceTypeConfig = {
 export default function DeviceCard({ device, onSelect }) {
 
     // get config based on device type
-    const config = deviceTypeConfig[device.type] || deviceTypeConfig.Switch;
+    const config = deviceTypeConfig[device.type] || deviceTypeConfig.switch;
     const Icon = config.icon;
     const isOn = device.state?.value > 0;
 
@@ -90,7 +90,7 @@ export default function DeviceCard({ device, onSelect }) {
                     {/* Content */}
                     <div className="p-6 flex-1">
                         {/* Switch Type */}
-                        {device.type === 'Switch' && (
+                        {device.type === 'switch' && (
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-2xl font-bold text-slate-900 text-left">{isOn ? 'ON' : 'OFF'}</p>
@@ -106,7 +106,7 @@ export default function DeviceCard({ device, onSelect }) {
                         )}
 
                         {/* Slider Type */}
-                        {device.type === 'Slider' && (
+                        {device.type === 'slider' && (
                             <div className="space-y-3">
                                 <div className="flex items-end justify-between">
                                     <p className="text-3xl font-bold text-slate-900">{device.state?.value || 0}</p>
@@ -128,7 +128,7 @@ export default function DeviceCard({ device, onSelect }) {
                         )}
 
                         {/* Sensor Type */}
-                        {device.type === 'Sensor' && (
+                        {device.type === 'sensor' && (
                             <div>
                                 <div className="flex items-end gap-2 mb-2">
                                     <p className="text-3xl font-bold text-slate-900">{device.state?.value || 0}</p>

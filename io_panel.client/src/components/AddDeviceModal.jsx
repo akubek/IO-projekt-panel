@@ -37,7 +37,7 @@ export default function AddDeviceModal({ open, devices, onClose, onSelect }) {
                                             <button
                                                 type="button"
                                                 onClick={(e) => { e.stopPropagation(); onSelect && onSelect(d); }}
-                                                className="inline-flex items-center justify-center px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+                                                className="inline-flex items-center justify-center px-3 py-1 bg-blue-600 text-black rounded hover:bg-blue-700"
                                                 aria-label={`Configure ${d.name}`}
                                             >
                                                 +

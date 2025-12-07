@@ -15,9 +15,9 @@ builder.Services.AddHttpClient<IDeviceApiClient, HttpDeviceApiClient>(client =>
 // seed sample devices
 var seedDevices =  new List<Device>
 {
-    new Device { Id = "dev-1", Name = "Sensor A", Type = "Sensor", Status = "Online", LastSeen = DateTime.UtcNow.AddMinutes(-1), Localization = "Living room", Description = "Temperature sensor", State = new DeviceState { Value = 22.5, Unit = "°C" }, Config = new DeviceConfig { ReadOnly = true, Min = -40, Max = 125, Step = 0.1 }, IsConfigured = true },
-    new Device { Id = "dev-2", Name = "Lamp B",  Type = "Switch", Status = "Offline", LastSeen = DateTime.UtcNow.AddHours(-1), Localization = "Kitchen", Description = "Ceiling lamp", State = new DeviceState { Value = 0, Unit = null }, Config = new DeviceConfig { ReadOnly = false, Min = 0, Max = 1, Step = 1 }, IsConfigured = false },
-    new Device { Id = "dev-3", Name = "Thermometer C",  Type = "Slider", Status = "Online", LastSeen = DateTime.UtcNow.AddMinutes(-1), Localization = "Garage", Description = "Setpoint control", State = new DeviceState { Value = 50, Unit = "%" }, Config = new DeviceConfig { ReadOnly = false, Min = 0, Max = 100, Step = 1 }, IsConfigured = true }
+    new Device { Id = "dev-1", Name = "Sensor A", Type = "sensor", Status = "Online", LastSeen = DateTime.UtcNow.AddMinutes(-1), Localization = "Living room", Description = "Temperature sensor", State = new DeviceState { Value = 22.5, Unit = "°C" }, Config = new DeviceConfig { ReadOnly = true, Min = -40, Max = 125, Step = 0.1 }, IsConfigured = true },
+    new Device { Id = "dev-2", Name = "Lamp B",  Type = "switch", Status = "Offline", LastSeen = DateTime.UtcNow.AddHours(-1), Localization = "Kitchen", Description = "Ceiling lamp", State = new DeviceState { Value = 0, Unit = null }, Config = new DeviceConfig { ReadOnly = false, Min = 0, Max = 1, Step = 1 }, IsConfigured = false },
+    new Device { Id = "dev-3", Name = "Thermometer C",  Type = "slider", Status = "Online", LastSeen = DateTime.UtcNow.AddMinutes(-1), Localization = "Garage", Description = "Setpoint control", State = new DeviceState { Value = 50, Unit = "%" }, Config = new DeviceConfig { ReadOnly = false, Min = 0, Max = 100, Step = 1 }, IsConfigured = true }
 };
 
 // register config store (in-memory for now)
