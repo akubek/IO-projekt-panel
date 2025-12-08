@@ -1,24 +1,28 @@
+using IO_Panel.Server.Mappers;
+using IO_Panel.Server.Repositories.Entities;
+
 namespace IO_Panel.Server.Models
 {
     // Domain / view model used by controllers, UI and persistence layers
     public class Device
     {
-        // local identifier (may be from API or generated locally)
+        // local identifier based on ApiDevice.id
         public string Id { get; set; } = default!;
 
-        public string Name { get; set; } = default!;
+        public string DeviceName { get; set; } = default!;
         public string Type { get; set; } = default!;
         public string Location { get; set; } = default!;
         public string Description { get; set; } = default!;
 
-        // keep nested types similar to API for ease, but owned by domain model
+        // nested state and config based on ApiDevice structure
         public DeviceState State { get; set; } = new();
         public DeviceConfig Config { get; set; } = new();
 
         // UI/persistence specific fields
         public DateTime LastSeen { get; set; } = DateTime.UtcNow;
-        public string Status { get; set; } = "Unknown";   // e.g. Online/Offline
-        public string? Localization { get; set; }          // if different naming is needed
+        public string Status { get; set; } = "Offline";   // e.g. Online/Offline low battery, etc.
+        public string DisplayName { get; set; } = string.Empty; //name displayed in the IoT Panel
+        public string? Localization { get; set; }          // if different naming is needed, not used yet
 
         // metadata from API
         // maps to ApiDevice.createdAt
@@ -26,6 +30,7 @@ namespace IO_Panel.Server.Models
 
         // Whether this device has been configured
         public bool IsConfigured { get; set; } = false;
+
     }
 
     public class DeviceState
@@ -41,4 +46,5 @@ namespace IO_Panel.Server.Models
         public double Max { get; set; }
         public double Step { get; set; }
     }
+
 }

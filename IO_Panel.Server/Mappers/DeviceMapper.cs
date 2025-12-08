@@ -6,12 +6,16 @@ namespace IO_Panel.Server.Mappers
     public static class DeviceMapper
     {
         // map API model -> domain model
-        public static Device ToDomain(this ApiDevice api, string? id = null, DateTime? lastSeen = null)
+        public static Device ToDomain(this ApiDevice api, string? name = null, DateTime? lastSeen = null)
         {
+            if (api.Id == null)
+            {
+                throw new ArgumentNullException(nameof(api.Id), "API Device ID cannot be null.");
+            }
             return new Device
             {
-                Id = id ?? Guid.NewGuid().ToString(),
-                Name = api.Name ?? string.Empty,
+                Id = api.Id,
+                DeviceName = api.Name ?? string.Empty,
                 Type = api.Type ?? string.Empty,
                 Location = api.Location ?? string.Empty,
                 Description = api.Description ?? string.Empty,
@@ -28,8 +32,9 @@ namespace IO_Panel.Server.Mappers
                     Max = api.Config?.Max ?? 0,
                     Step = api.Config?.Step ?? 0
                 },
+                DisplayName = name ?? api.Name ?? string.Empty,
                 LastSeen = lastSeen ?? DateTime.UtcNow,
-                Status = "Unknown",
+                Status = "Online",
                 CreatedAt = api.CreatedAt
             };
         }
@@ -39,7 +44,7 @@ namespace IO_Panel.Server.Mappers
         {
             return new ApiDevice
             {
-                Name = d.Name,
+                Name = d.DeviceName,
                 Type = d.Type,
                 Location = d.Location,
                 Description = d.Description,
@@ -47,6 +52,15 @@ namespace IO_Panel.Server.Mappers
                 Config = new ApiDeviceConfig { Readonly = d.Config.ReadOnly, Min = d.Config.Min, Max = d.Config.Max, Step = d.Config.Step },
                 CreatedAt = d.CreatedAt
             };
+        }
+
+        internal static void UpdateFromApiDevice(this Device d, ApiDevice apiDevice)
+        {
+            if (d.Id != apiDevice.Id)
+            {
+                throw new ArgumentException("Device ID mismatch between domain and API models.");
+            }
+            d = apiDevice.ToDomain(name: d.DeviceName);
         }
     }
 }

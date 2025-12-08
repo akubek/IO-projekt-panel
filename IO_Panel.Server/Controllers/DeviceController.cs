@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using MassTransit;
 using IO_Panel.Server.Contracts;
+using System.ComponentModel;
 
 namespace IO_Panel.Server.Controllers
 {
@@ -33,8 +34,15 @@ namespace IO_Panel.Server.Controllers
         [HttpGet(Name = "GetDevices")]
         public async Task<ActionResult<IEnumerable<Device>>> Get(CancellationToken ct)
         {
-            var devices = await _repo.GetAllAsync(ct);
+            var devices = await _repo.GetConfiguredDevicesAsync(ct);
             return Ok(devices);
+        }
+
+        [HttpGet("external")]
+        public async Task<ActionResult<IEnumerable<ApiDevice>>> GetExternal(CancellationToken ct)
+        {
+            var list = await _apiClient.GetAllAsync(ct);
+            return Ok(list);
         }
 
         [HttpGet("{id}")]
@@ -45,24 +53,33 @@ namespace IO_Panel.Server.Controllers
             return Ok(device);
         }
 
-        // Return devices from the external API
-        [HttpGet("external")]
-        public async Task<ActionResult<IEnumerable<ApiDevice>>> GetExternal(CancellationToken ct)
-        {
-            var list = await _apiClient.GetAllAsync(ct);
-            return Ok(list);
-        }
-
-        // Create / add configured device
+        // Configure a new device
         [HttpPost]
-        public async Task<ActionResult<Device>> Create([FromBody] Device device, CancellationToken ct)
+        public async Task<ActionResult<Device>> ConfigureDevice([FromBody] ApiDevice device,[FromBody] string displayName,  CancellationToken ct)
         {
             if (device is null) return BadRequest();
-            if (string.IsNullOrWhiteSpace(device.Id)) device.Id = Guid.NewGuid().ToString();
+            if (string.IsNullOrWhiteSpace(device.Id)) return BadRequest("Device ID is required.");
 
-            await _repo.AddAsync(device, ct);
+            await _repo.AddAsync(device,displayName, ct);
 
             return CreatedAtAction(nameof(Get), new { id = device.Id }, device);
+        }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateDevice(string id, [FromBody] DeviceUpdateDto updateDto, CancellationToken ct)
+        {
+            var device = await _repo.GetByIdAsync(id, ct);
+            if (device is null)
+            {
+                return NotFound();
+            }
+
+            device.DisplayName = updateDto.DisplayName;
+            device.Localization = updateDto.Localization;
+
+            await _repo.UpdateAsync(device, ct);
+
+            return NoContent();
         }
 
         [HttpPost("{id}/command")]
@@ -96,10 +113,43 @@ namespace IO_Panel.Server.Controllers
             return Accepted(new { deviceId = id, state });
         }
 
+        // Admin endpoint to retrieve devices with detailed information
+        [HttpGet("admin/unconfigured")]
+        public async Task<ActionResult<IEnumerable<ApiDevice>>> GetUnconfiguredDevices(CancellationToken ct)
+        {
+            // Only admin users can access this endpoint
+            if (!User.IsInRole("Admin"))
+            {
+                return Forbid();
+            }
+
+            var devices = await _repo.GetUnconfiguredDevicesAsync(ct);
+            return Ok(devices);
+        }
+
+        // Admin endpoint to delete a device
+        [HttpDelete("admin/{id}")]
+        public async Task<ActionResult> DeleteConfiguredDevice(string id, CancellationToken ct)
+        {
+            // Only admin users can access this endpoint
+            if (!User.IsInRole("Admin"))
+            {
+                return Forbid();
+            }
+
+            var device = await _repo.GetByIdAsync(id, ct);
+            if (device is null) return NotFound();
+
+            await _repo.DeleteAsync(id, ct);
+            return NoContent();
+        }
+
         public record CommandDto
         {
             public string Command { get; init; } = default!;
             public string? Payload { get; init; }
         }
+
+        public record DeviceUpdateDto(string DisplayName, string? Localization);
     }
 }
