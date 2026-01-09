@@ -13,6 +13,7 @@ import RoomList from './components/RoomList'; // Import the new component
 import SceneList from './components/SceneList';
 import AutomationList from './components/AutomationList';
 import AddRoomModal from './components/AddRoomModal';
+import DeviceDetailsModal from './components/DeviceDetailsModal';
 
 
 //Próba połączenia frontu z backendem i wypisywania urządzeń z backendu, bazowane na przykładzie z weatherforecast
@@ -22,11 +23,12 @@ function App() {
     const [scenes, setScenes] = useState([]); // New state for scenes
     const [automations, setAutomations] = useState([]); // New state for automations
     const [activeTab, setActiveTab] = useState('devices'); // 'devices', 'rooms', 'scenes', or 'automations'
-    const [_selectedDevice, setSelectedDevice] = useState(null);
+    const [selectedDevice, setSelectedDevice] = useState(null);
     const [loggingIn, setLoggingIn] = useState(false);
 
     // nowy stan: czy użytkownik jest zalogowany
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [authToken, setAuthToken] = useState(null);
 
     // Add-device modal state
     const [showAddModal, setShowAddModal] = useState(false);
@@ -53,14 +55,20 @@ function App() {
     async function openAddModal() {
         setShowAddModal(true);
         try {
-            const res = await fetch('/device/external');
+            const res = await fetch('/device/admin/unconfigured', {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            });
             if (res.ok) {
                 const data = await res.json();
                 setExternalDevices(data);
             } else {
+                console.error(`Failed to fetch unconfigured devices: ${res.status}`);
                 setExternalDevices([]);
             }
-        } catch {
+        } catch (err) {
+            console.error('Error fetching unconfigured devices:', err);
             setExternalDevices([]);
         }
     }
@@ -90,7 +98,10 @@ function App() {
             // 1. Sends a POST request to the `/room` endpoint
             const response = await fetch('/room', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`
+                },
                 body: JSON.stringify(newRoom),
             });
             if (response.ok) {
@@ -113,6 +124,9 @@ function App() {
         try {
             const response = await fetch(`/scene/${sceneId}/activate`, {
                 method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
             });
             if (response.ok) {
                 console.log(`Scene ${sceneId} activated`);
@@ -123,6 +137,17 @@ function App() {
         } catch (error) {
             console.error("Error activating scene:", error);
         }
+    }
+
+    function handleLogin(token) {
+        setAuthToken(token);
+        setIsLoggedIn(true);
+        setLoggingIn(false);
+    }
+
+    function handleLogout() {
+        setAuthToken(null);
+        setIsLoggedIn(false);
     }
 
     //Wyświetlanie
@@ -159,7 +184,7 @@ function App() {
                             </div>
 
                             {!isLoggedIn ? (
-                                <Button className="bg-gradient-to-r !text-white from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 shadow-lg">
+                                <Button disabled className="bg-gradient-to-r !text-white from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 shadow-lg">
                                     <Plus className="w-4 h-4 mr-2" />
                                     Add Device
                                 </Button>
@@ -178,7 +203,7 @@ function App() {
                                     Log in
                                 </Button>
                             ) : (
-                                <Button className="bg-gradient-to-r !text-white from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 shadow-lg" onClick={() => setIsLoggedIn(false)}>
+                                <Button className="bg-gradient-to-r !text-white from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 shadow-lg" onClick={handleLogout}>
                                     <User className="w-4 h-4 mr-2" />
                                     Log out
                                 </Button>
@@ -265,7 +290,7 @@ function App() {
             <LoggingInOpen
                 open={loggingIn}
                 onClose={() => setLoggingIn(false)}
-                onLogin={() => { setIsLoggedIn(true); setLoggingIn(false); }}
+                onLogin={handleLogin}
             />
 
             <AddDeviceModal
@@ -286,6 +311,12 @@ function App() {
                 apiDevice={deviceToConfigure}
                 onClose={closeConfigureModal}
                 onAdd={handleAddDevice}
+            />
+
+            <DeviceDetailsModal
+                open={!!selectedDevice}
+                device={selectedDevice}
+                onClose={() => setSelectedDevice(null)}
             />
         </div>
     );

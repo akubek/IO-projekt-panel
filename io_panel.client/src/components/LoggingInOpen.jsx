@@ -21,7 +21,7 @@ export default function LoggingInOpen({ open, onClose, onLogin }) {
                 const data = await response.json(); // Instead use JWT token in the future
 
                 if (onLogin) {
-                    onLogin();
+                    onLogin(data.token);
                 }
             } else if (response.status === 401) {
                 alert("Invalid username or password.");

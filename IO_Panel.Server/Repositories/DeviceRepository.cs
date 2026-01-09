@@ -75,11 +75,10 @@ public class DeviceRepository : IDeviceRepository
         return device;
     }
 
-    public Task<Device> AddAsync(ApiDevice device, string name, CancellationToken cancellationToken = default)
+    public Task<Device> AddAsync(Device device, CancellationToken cancellationToken = default)
     {
-        var newDevice = device.ToDomain(name, null);
-        _devices.Add(newDevice);
-        return Task.FromResult(newDevice);
+        _devices.Add(device);
+        return Task.FromResult(device);
     }
 
     public Task UpdateAsync(Device device, CancellationToken cancellationToken = default)

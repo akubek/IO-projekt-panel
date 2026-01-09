@@ -78,7 +78,7 @@ export default function DeviceCard({ device, onSelect }) {
                                 {device.type.toUpperCase()}
                             </Badge>
                         </div>
-                        <h3 className="text-lg font-bold text-slate-900 mb-1 text-left">{device.name}</h3>
+                        <h3 className="text-lg font-bold text-slate-900 mb-1 text-left">{device.displayName}</h3>
                         {device.localization && (
                             <div className="flex items-center gap-1 text-sm text-slate-500">
                                 <MapPin className="w-3 h-3" />

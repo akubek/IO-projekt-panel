@@ -1,16 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using IO_Panel.Server.Contracts;
+using IO_Panel.Server.Mappers;
 using IO_Panel.Server.Models;
 using IO_Panel.Server.Repositories;
 using IO_Panel.Server.Repositories.Entities;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
 using MassTransit;
-using IO_Panel.Server.Contracts;
-using System.ComponentModel;
+using Microsoft.AspNetCore.Mvc;
+
 
 namespace IO_Panel.Server.Controllers
 {
@@ -55,14 +50,22 @@ namespace IO_Panel.Server.Controllers
 
         // Configure a new device
         [HttpPost]
-        public async Task<ActionResult<Device>> ConfigureDevice([FromBody] ConfigureDeviceRequest request,  CancellationToken ct)
+        public async Task<ActionResult<Device>> ConfigureDevice([FromBody] ConfigureDeviceRequestDto request,  CancellationToken ct)
         {
             if (request is null) return BadRequest();
-            if (string.IsNullOrWhiteSpace(request.Device.Id)) return BadRequest("Device ID is required.");
+            if (string.IsNullOrWhiteSpace(request.ApiDeviceId)) return BadRequest("Device ID is required.");
 
-            await _repo.AddAsync(request.Device,request.DisplayName, ct);
+            var apiDevice = await _apiClient.GetByIdAsync(request.ApiDeviceId, ct);
+            if (apiDevice is null)
+            {
+                return NotFound("The device to be configured was not found in the external API.");
+            }
 
-            return CreatedAtAction(nameof(Get), new { id = request.Device.Id }, request.Device);
+            Device device = apiDevice.ToDomain(name: request.DisplayName, lastSeen: DateTime.UtcNow);
+
+            await _repo.AddAsync(device, ct);
+
+            return CreatedAtAction(nameof(Get), new { id = device.Id }, device);
         }
 
         [HttpPut("{id}")]
@@ -76,6 +79,7 @@ namespace IO_Panel.Server.Controllers
 
             device.DisplayName = updateDto.DisplayName;
             device.Localization = updateDto.Localization;
+            device.LastSeen = DateTime.UtcNow;
 
             await _repo.UpdateAsync(device, ct);
 
@@ -113,7 +117,7 @@ namespace IO_Panel.Server.Controllers
             return Accepted(new { deviceId = id, state });
         }
 
-        // Admin endpoint to retrieve devices with detailed information
+        // Admin endpoint to retrieve external unconfigured devices with detailed information
         [HttpGet("admin/unconfigured")]
         public async Task<ActionResult<IEnumerable<ApiDevice>>> GetUnconfiguredDevices(CancellationToken ct)
         {
@@ -151,5 +155,7 @@ namespace IO_Panel.Server.Controllers
         }
 
         public record DeviceUpdateDto(string DisplayName, string? Localization);
+
+        public record ConfigureDeviceRequestDto(string ApiDeviceId, string DisplayName);
     }
 }
