@@ -28,8 +28,8 @@ namespace IO_Panel.Server.Models
         // maps to ApiDevice.createdAt
         public DateTimeOffset? CreatedAt { get; set; }
 
-        // Whether this device has been configured
-        public bool IsConfigured { get; set; } = false;
+        //If device is configured it is in the database - uncofigured devices are pulled from the external api
+        //public bool IsConfigured { get; set; } = false;
 
     }
 

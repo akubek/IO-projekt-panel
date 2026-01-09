@@ -21,7 +21,7 @@ namespace IO_Panel.Server.Controllers
         private readonly ILogger<DeviceController> _logger;
         private readonly IDeviceRepository _repo;
         private readonly IDeviceApiClient _apiClient;
-        private readonly IPublishEndpoint _publishEndpoint;
+        private readonly IPublishEndpoint _publishEndpoint; // RabbitMQ publish endpoint
 
         public DeviceController(ILogger<DeviceController> logger, IDeviceRepository repo, IDeviceApiClient apiClient, IPublishEndpoint publishEndpoint)
         {
@@ -55,14 +55,14 @@ namespace IO_Panel.Server.Controllers
 
         // Configure a new device
         [HttpPost]
-        public async Task<ActionResult<Device>> ConfigureDevice([FromBody] ApiDevice device,[FromBody] string displayName,  CancellationToken ct)
+        public async Task<ActionResult<Device>> ConfigureDevice([FromBody] ConfigureDeviceRequest request,  CancellationToken ct)
         {
-            if (device is null) return BadRequest();
-            if (string.IsNullOrWhiteSpace(device.Id)) return BadRequest("Device ID is required.");
+            if (request is null) return BadRequest();
+            if (string.IsNullOrWhiteSpace(request.Device.Id)) return BadRequest("Device ID is required.");
 
-            await _repo.AddAsync(device,displayName, ct);
+            await _repo.AddAsync(request.Device,request.DisplayName, ct);
 
-            return CreatedAtAction(nameof(Get), new { id = device.Id }, device);
+            return CreatedAtAction(nameof(Get), new { id = request.Device.Id }, request.Device);
         }
 
         [HttpPut("{id}")]

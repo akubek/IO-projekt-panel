@@ -25,10 +25,11 @@ public class DeviceRepository : IDeviceRepository
         _deviceApiClient = deviceApiClient;
     }
 
-    public async Task<IEnumerable<Device>> GetConfiguredDevices()
+    public async Task<IEnumerable<Device>> GetConfiguredDevicesAsync(CancellationToken cancellationToken = default)
     {
         var apiDevices = (await _deviceApiClient.GetAllAsync()).ToDictionary(d => d.Id);
 
+        //try to update all devices before returning them
         foreach (var device in _devices)
         {
             if (apiDevices.TryGetValue(device.Id, out var apiDevice))
@@ -94,11 +95,6 @@ public class DeviceRepository : IDeviceRepository
         return Task.CompletedTask;
     }
 
-
-    public Task<IEnumerable<Device>> GetConfiguredDevicesAsync(CancellationToken cancellationToken = default)
-    {
-        throw new NotImplementedException();
-    }
 
     public Task DeleteAsync(string id, CancellationToken cancellationToken = default)
     {

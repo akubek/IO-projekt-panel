@@ -4,6 +4,8 @@ using IO_Panel.Server.Models;
 using IO_Panel.Server.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using MassTransit;
+using IO_Panel.Server.Contracts;
 
 namespace IO_Panel.Server.Controllers
 {
@@ -14,12 +16,14 @@ namespace IO_Panel.Server.Controllers
         private readonly ISceneRepository _sceneRepository;
         private readonly IDeviceRepository _deviceRepository;
         private readonly ILogger<SceneController> _logger;
+        private readonly IPublishEndpoint _publishEndpoint;
 
-        public SceneController(ISceneRepository sceneRepository, IDeviceRepository deviceRepository, ILogger<SceneController> logger)
+        public SceneController(ISceneRepository sceneRepository, IDeviceRepository deviceRepository, ILogger<SceneController> logger, IPublishEndpoint publishEndpoint)
         {
             _sceneRepository = sceneRepository;
             _deviceRepository = deviceRepository;
             _logger = logger;
+            _publishEndpoint = publishEndpoint;
         }
 
         [HttpGet]
@@ -91,16 +95,24 @@ namespace IO_Panel.Server.Controllers
                 return NotFound();
             }
 
+            //for each scene action publish a command.
+            //might be better to batch these in the future depending on scene sizes
             foreach (var action in scene.Actions)
             {
-                try
+                if (Guid.TryParse(action.DeviceId, out var deviceIdGuid))   //check if device id is a valid guid
                 {
-                    await _deviceRepository.RequestStateChangeAsync(action.DeviceId, action.TargetState, HttpContext.RequestAborted);
+                    var command = new SetDeviceStateCommand
+                    {
+                        DeviceId = deviceIdGuid,
+                        Value = action.TargetState.Value,
+                        Unit = action.TargetState.Unit
+                    };
+
+                    await _publishEndpoint.Publish(command);
                 }
-                catch (Exception ex)
+                else
                 {
-                    _logger.LogWarning(ex, "Failed to apply scene action for device {DeviceId}", action.DeviceId);
-                    // Continue to next action even if one fails
+                    _logger.LogWarning("Invalid Device GUID in scene action: {DeviceId}", action.DeviceId);
                 }
             }
 
