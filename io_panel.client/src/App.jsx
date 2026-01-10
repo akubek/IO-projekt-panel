@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+﻿import { useEffect, useState, useMemo } from 'react';
 import './App.css';
 import DeviceCard from './components/DeviceCard';
 import LoggingInOpen from './components/LoggingInOpen';
@@ -45,6 +45,19 @@ function App() {
 
     // deviceId -> { targetValue, unit, sentAtMs }
     const [pendingCommandsByDeviceId, setPendingCommandsByDeviceId] = useState({});
+
+    const roomNamesByDeviceId = useMemo(() => {
+        const map = {};
+
+        for (const room of rooms ?? []) {
+            for (const device of room.devices ?? []) {
+                const current = map[device.id] ?? [];
+                map[device.id] = current.includes(room.name) ? current : [...current, room.name];
+            }
+        }
+
+        return map;
+    }, [rooms]);
 
     useEffect(() => {
         populateAllData();
@@ -414,56 +427,15 @@ function App() {
         }
     }
 
-    async function refreshDevice(deviceId) {
-        try {
-            const res = await fetch(`/device/${deviceId}`);
-            if (!res.ok) {
-                return;
-            }
-
-            const device = await res.json();
-
-            setDevices((prev) => prev.map(d => (d.id === deviceId ? device : d)));
-
-            setRooms((prevRooms) =>
-                prevRooms.map((room) => ({
-                    ...room,
-                    devices: (room.devices ?? []).map((d) => (d.id === deviceId ? device : d))
-                }))
-            );
-
-            setSelectedDevice((prev) => (prev?.id === deviceId ? device : prev));
-        } catch (err) {
-            console.error("Error refreshing device:", err);
-        }
-    }
-
     function markDevicePending(deviceId, targetValue, unit) {
-        const sentAtMs = Date.now();
-
         setPendingCommandsByDeviceId((prev) => ({
             ...prev,
-            [deviceId]: { targetValue, unit, sentAtMs }
+            [deviceId]: {
+                targetValue,
+                unit,
+                sentAtMs: Date.now()
+            }
         }));
-
-        window.setTimeout(() => {
-            setPendingCommandsByDeviceId((prev) => {
-                const pending = prev[deviceId];
-                if (!pending) {
-                    return prev; // already resolved via SignalR
-                }
-
-                // Only act if this timeout corresponds to the latest command for this device
-                if (pending.sentAtMs !== sentAtMs) {
-                    return prev;
-                }
-
-                void refreshDevice(deviceId);
-
-                const { [deviceId]: _, ...rest } = prev;
-                return rest;
-            });
-        }, 1500);
     }
 
     function handleToggleDevice(device, nextIsOn) {
@@ -534,8 +506,6 @@ function App() {
                                 </Button>
                             )}
 
-
-
                             {!isLoggedIn ? (
                                 <Button className="bg-gradient-to-r !text-white from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 shadow-lg" onClick={() => setLoggingIn(true)}>
                                     <User className="w-4 h-4 mr-2" />
@@ -551,6 +521,7 @@ function App() {
                     </div>
                 </div>
             </div>
+
             {/* Tekst widoczny tylko po zalogowaniu (Admin) */}
             {isLoggedIn && (
                 <div className="w-full px-6 py-4 bg-red-100 border-l-4 border-red-500">
@@ -619,6 +590,7 @@ function App() {
                                 <DeviceCard
                                     key={device.id}
                                     device={device}
+                                    roomNames={roomNamesByDeviceId?.[device.id] ?? []}
                                     isAdmin={isLoggedIn}
                                     onDelete={() => handleDeleteDevice(device.id)}
                                     onSelect={() => setSelectedDevice(device)}
@@ -640,6 +612,7 @@ function App() {
                         onToggle={handleToggleDevice}
                         onSetValue={handleSetSliderDeviceValue}
                         pendingCommandsByDeviceId={pendingCommandsByDeviceId}
+                        roomNamesByDeviceId={roomNamesByDeviceId}
                     />
                 )}
 

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Home, Tv, Plus, Trash2 } from 'lucide-react';
 import DeviceCard from './DeviceCard';
 
-const RoomCard = ({ room, isAdmin, onAddDevice, onDelete, onToggle, onSetValue, pendingCommandsByDeviceId }) => {
+const RoomCard = ({ room, isAdmin, onAddDevice, onDelete, onToggle, onSetValue, pendingCommandsByDeviceId, roomNamesByDeviceId }) => {
     const deviceCount = room.devices?.length || 0;
 
     const handleDelete = (e) => {
@@ -71,6 +71,7 @@ const RoomCard = ({ room, isAdmin, onAddDevice, onDelete, onToggle, onSetValue, 
                                     onToggle={onToggle}
                                     onSetValue={onSetValue}
                                     pendingCommand={pendingCommandsByDeviceId?.[device.id] ?? null}
+                                    roomNames={roomNamesByDeviceId?.[device.id] ?? []}
                                 />
                             ))}
                         </AnimatePresence>

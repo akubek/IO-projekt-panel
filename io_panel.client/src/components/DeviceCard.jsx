@@ -3,7 +3,7 @@ import Card from "@mui/material/Card";
 import Badge from "@mui/material/Badge";
 import Switch from "@mui/material/Switch";
 import Slider from "@mui/material/Slider";
-import { Activity, Gauge, MapPin, Power, Trash2 } from "lucide-react";
+import { Activity, AlertTriangle, Gauge, MapPin, Power, Trash2 } from "lucide-react";
 import clsx from "clsx";
 
 const deviceTypeConfig = {
@@ -30,7 +30,7 @@ const deviceTypeConfig = {
     }
 };
 
-export default function DeviceCard({ device, onSelect, isAdmin, onDelete, onToggle, onSetValue }) {
+export default function DeviceCard({ device, onSelect, isAdmin, onDelete, onToggle, onSetValue, roomNames }) {
     const config = deviceTypeConfig[device.type] || deviceTypeConfig.switch;
     const Icon = config.icon;
 
@@ -89,6 +89,9 @@ export default function DeviceCard({ device, onSelect, isAdmin, onDelete, onTogg
         }
     };
 
+    const roomsText = (roomNames ?? []).filter(Boolean).join(", ");
+    const hasRooms = !!roomsText;
+
     return (
         <div className="w-full">
             <div className="max-w-sm w-full">
@@ -109,6 +112,19 @@ export default function DeviceCard({ device, onSelect, isAdmin, onDelete, onTogg
                                 </div>
                                 <div className="min-w-0">
                                     <h3 className="text-lg font-bold text-slate-900 mb-1 text-left truncate">{device.displayName}</h3>
+
+                                    {hasRooms && (
+                                        <div className="text-sm text-slate-500 text-left truncate">
+                                            Rooms: {roomsText}
+                                        </div>
+                                    )}
+
+                                    {device.location && (
+                                        <div className="text-sm text-slate-500 text-left truncate">
+                                            Location: {device.location}
+                                        </div>
+                                    )}
+
                                     {device.localization && (
                                         <div className="flex items-center gap-1 text-sm text-slate-500">
                                             <MapPin className="w-3 h-3" />
@@ -206,6 +222,15 @@ export default function DeviceCard({ device, onSelect, isAdmin, onDelete, onTogg
                             <p className="text-sm text-grey-400 mt-4 line-clamp-2 text-left">{device.description}</p>
                         )}
                     </div>
+
+                    {device.malfunctioning && (
+                        <div className="px-6 pb-5">
+                            <div className="flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                                <AlertTriangle className="w-4 h-4" />
+                                <span>Warning: device malfunctioning</span>
+                            </div>
+                        </div>
+                    )}
                 </Card>
             </div>
         </div>
