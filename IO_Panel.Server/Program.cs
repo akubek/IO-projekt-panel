@@ -16,18 +16,24 @@ builder.Services.AddHttpClient<IDeviceApiClient, HttpDeviceApiClient>(client =>
 // Configure MassTransit with RabbitMQ
 builder.Services.AddMassTransit(x =>
 {
+    x.AddConsumer<DeviceUpdatedEventConsumer>();
+
     x.UsingRabbitMq((context, cfg) =>
     {
-        // Configuration for local RabbitMQ instance in Docker
-        cfg.Host("localhost", "/", h => {
+        cfg.Host("localhost", "/", h =>
+        {
             h.Username("guest");
             h.Password("guest");
         });
 
-        cfg.ConfigureEndpoints(context);
+        cfg.ReceiveEndpoint("device-updates", e =>
+        {
+            e.ConfigureConsumeTopology = false;
+            e.Bind("device-updated");
+            e.ConfigureConsumer<DeviceUpdatedEventConsumer>(context);
+        });
     });
 });
-
 
 // Correctly register DeviceRepository with its dependencies
 builder.Services.AddSingleton<IDeviceRepository>(sp =>
@@ -37,7 +43,7 @@ builder.Services.AddSingleton<IDeviceRepository>(sp =>
     ));
 
 // Register the new repositories as singletons
-builder.Services.AddSingleton<IRoomRepository>(sp => 
+builder.Services.AddSingleton<IRoomRepository>(sp =>
     new RoomRepository(sp.GetRequiredService<IDeviceRepository>()));
 builder.Services.AddSingleton<ISceneRepository, SceneRepository>();
 builder.Services.AddSingleton<IAutomationRepository, AutomationRepository>();
