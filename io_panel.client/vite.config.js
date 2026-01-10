@@ -51,12 +51,35 @@ export default defineConfig({
     },
     server: {
         proxy: {
-            '^/device': { //tutaj musialem zmieniæ na device zeby fetch w app.jsx dzia³a³
-                target,
+            '/hubs': {
+                target: 'https://localhost:7280',
+                changeOrigin: true,
+                secure: false,
+                ws: true
+            },
+            '/auth': {
+                target: 'https://localhost:7280',
+                changeOrigin: true,
                 secure: false
             },
-            '^/auth': {
-                target,
+            '/device': {
+                target: 'https://localhost:7280',
+                changeOrigin: true,
+                secure: false
+            },
+            '/room': {
+                target: 'https://localhost:7280',
+                changeOrigin: true,
+                secure: false
+            },
+            '/scene': {
+                target: 'https://localhost:7280',
+                changeOrigin: true,
+                secure: false
+            },
+            '/automation': {
+                target: 'https://localhost:7280',
+                changeOrigin: true,
                 secure: false
             }
         },

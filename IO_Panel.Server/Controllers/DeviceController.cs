@@ -1,11 +1,11 @@
-﻿using IO_Panel.Server.Contracts;
+﻿using IO_projekt_symulator.Server.Contracts;
 using IO_Panel.Server.Mappers;
 using IO_Panel.Server.Models;
 using IO_Panel.Server.Repositories;
 using IO_Panel.Server.Repositories.Entities;
 using MassTransit;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-
 
 namespace IO_Panel.Server.Controllers
 {
@@ -29,15 +29,31 @@ namespace IO_Panel.Server.Controllers
         [HttpGet(Name = "GetDevices")]
         public async Task<ActionResult<IEnumerable<Device>>> Get(CancellationToken ct)
         {
-            var devices = await _repo.GetConfiguredDevicesAsync(ct);
-            return Ok(devices);
+            try
+            {
+                var devices = await _repo.GetConfiguredDevicesAsync(ct);
+                return Ok(devices);
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "Failed to load devices from external API.");
+                return StatusCode(StatusCodes.Status503ServiceUnavailable, "Device API is unavailable.");
+            }
         }
 
         [HttpGet("external")]
         public async Task<ActionResult<IEnumerable<ApiDevice>>> GetExternal(CancellationToken ct)
         {
-            var list = await _apiClient.GetAllAsync(ct);
-            return Ok(list);
+            try
+            {
+                var list = await _apiClient.GetAllAsync(ct);
+                return Ok(list);
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "Failed to load external devices from external API.");
+                return StatusCode(StatusCodes.Status503ServiceUnavailable, "Device API is unavailable.");
+            }
         }
 
         [HttpGet("{id}")]
@@ -50,7 +66,7 @@ namespace IO_Panel.Server.Controllers
 
         // Configure a new device
         [HttpPost]
-        public async Task<ActionResult<Device>> ConfigureDevice([FromBody] ConfigureDeviceRequestDto request,  CancellationToken ct)
+        public async Task<ActionResult<Device>> ConfigureDevice([FromBody] ConfigureDeviceRequestDto request, CancellationToken ct)
         {
             if (request is null) return BadRequest();
             if (string.IsNullOrWhiteSpace(request.ApiDeviceId)) return BadRequest("Device ID is required.");
@@ -118,29 +134,19 @@ namespace IO_Panel.Server.Controllers
         }
 
         // Admin endpoint to retrieve external unconfigured devices with detailed information
+        [Authorize(Roles = "Admin")]
         [HttpGet("admin/unconfigured")]
         public async Task<ActionResult<IEnumerable<ApiDevice>>> GetUnconfiguredDevices(CancellationToken ct)
         {
-            // Only admin users can access this endpoint
-            if (!User.IsInRole("Admin"))
-            {
-                return Forbid();
-            }
-
             var devices = await _repo.GetUnconfiguredDevicesAsync(ct);
             return Ok(devices);
         }
 
         // Admin endpoint to delete a device
+        [Authorize(Roles = "Admin")]
         [HttpDelete("admin/{id}")]
         public async Task<ActionResult> DeleteConfiguredDevice(string id, CancellationToken ct)
         {
-            // Only admin users can access this endpoint
-            if (!User.IsInRole("Admin"))
-            {
-                return Forbid();
-            }
-
             var device = await _repo.GetByIdAsync(id, ct);
             if (device is null) return NotFound();
 

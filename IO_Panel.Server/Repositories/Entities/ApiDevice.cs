@@ -27,6 +27,9 @@ namespace IO_Panel.Server.Repositories.Entities
 
         [JsonPropertyName("createdAt")]
         public DateTimeOffset? CreatedAt { get; set; }
+
+        [JsonPropertyName("malfunctioning")]
+        public bool Malfunctioning { get; set; }
     }
 
     public class ApiDeviceState

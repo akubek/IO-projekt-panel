@@ -5,7 +5,7 @@ using IO_Panel.Server.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using MassTransit;
-using IO_Panel.Server.Contracts;
+using IO_projekt_symulator.Server.Contracts;
 
 namespace IO_Panel.Server.Controllers
 {

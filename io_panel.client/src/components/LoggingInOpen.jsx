@@ -2,7 +2,6 @@ import Dialog from "@mui/material/Dialog";
 import Button from "@mui/material/Button";
 import { useState } from "react";
 
-
 export default function LoggingInOpen({ open, onClose, onLogin }) {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
@@ -18,7 +17,7 @@ export default function LoggingInOpen({ open, onClose, onLogin }) {
             });
 
             if (response.ok) {
-                const data = await response.json(); // Instead use JWT token in the future
+                const data = await response.json();
 
                 if (onLogin) {
                     onLogin(data.token);

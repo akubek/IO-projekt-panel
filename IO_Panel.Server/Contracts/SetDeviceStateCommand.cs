@@ -1,6 +1,6 @@
 using System;
 
-namespace IO_Panel.Server.Contracts
+namespace IO_projekt_symulator.Server.Contracts
 {
     // This contract MUST match the one used by the Simulator.
     public class SetDeviceStateCommand

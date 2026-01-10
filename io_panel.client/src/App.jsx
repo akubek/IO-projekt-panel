@@ -4,45 +4,90 @@ import DeviceCard from './components/DeviceCard';
 import LoggingInOpen from './components/LoggingInOpen';
 import AddDeviceModal from './components/AddDeviceModal';
 import ConfigureDeviceModal from './components/ConfigureDeviceModal';
-import { Plus, Cpu, User, Home, LayoutGrid, Film, Zap } from "lucide-react"; // Import new icons
+import { Plus, Cpu, User, Home, LayoutGrid, Film, Zap } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
 import Button from "@mui/material/Button";
 import { CircleDot } from "lucide-react";
 import { motion } from "framer-motion";
-import RoomList from './components/RoomList'; // Import the new component
+import RoomList from './components/RoomList';
 import SceneList from './components/SceneList';
 import AutomationList from './components/AutomationList';
 import AddRoomModal from './components/AddRoomModal';
 import DeviceDetailsModal from './components/DeviceDetailsModal';
+import * as signalR from "@microsoft/signalr";
 
-
-//Próba połączenia frontu z backendem i wypisywania urządzeń z backendu, bazowane na przykładzie z weatherforecast
 function App() {
     const [devices, setDevices] = useState([]);
-    const [rooms, setRooms] = useState([]); // New state for rooms
-    const [scenes, setScenes] = useState([]); // New state for scenes
-    const [automations, setAutomations] = useState([]); // New state for automations
-    const [activeTab, setActiveTab] = useState('devices'); // 'devices', 'rooms', 'scenes', or 'automations'
+    const [rooms, setRooms] = useState([]);
+    const [scenes, setScenes] = useState([]);
+    const [automations, setAutomations] = useState([]);
+    const [activeTab, setActiveTab] = useState('devices');
     const [selectedDevice, setSelectedDevice] = useState(null);
     const [loggingIn, setLoggingIn] = useState(false);
 
-    // nowy stan: czy użytkownik jest zalogowany
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [authToken, setAuthToken] = useState(null);
 
-    // Add-device modal state
     const [showAddModal, setShowAddModal] = useState(false);
     const [externalDevices, setExternalDevices] = useState([]);
 
-    // Add-room modal state
     const [showAddRoomModal, setShowAddRoomModal] = useState(false);
 
-    // Configure modal
     const [showConfigureModal, setShowConfigureModal] = useState(false);
     const [deviceToConfigure, setDeviceToConfigure] = useState(null);
 
     useEffect(() => {
         populateAllData();
+    }, []);
+
+    useEffect(() => {
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/hubs/device-updates")
+            .configureLogging(signalR.LogLevel.Information)
+            .withAutomaticReconnect()
+            .build();
+
+        connection.on("deviceUpdated", (update) => {
+            setDevices((prev) =>
+                prev.map((d) => {
+                    if (d.id !== update.deviceId) {
+                        return d;
+                    }
+
+                    return {
+                        ...d,
+                        state: {
+                            ...d.state,
+                            value: update.value ?? d.state?.value ?? 0,
+                            unit: update.unit ?? d.state?.unit
+                        },
+                        malfunctioning: update.malfunctioning ?? d.malfunctioning
+                    };
+                })
+            );
+
+            setSelectedDevice((prev) => {
+                if (!prev || prev.id !== update.deviceId) {
+                    return prev;
+                }
+
+                return {
+                    ...prev,
+                    state: {
+                        ...prev.state,
+                        value: update.value ?? prev.state?.value ?? 0,
+                        unit: update.unit ?? prev.state?.unit
+                    },
+                    malfunctioning: update.malfunctioning ?? prev.malfunctioning
+                };
+            });
+        });
+
+        connection.start().catch((err) => console.error("SignalR start failed:", err));
+
+        return () => {
+            connection.stop().catch(() => { });
+        };
     }, []);
 
     function populateAllData() {
@@ -54,19 +99,30 @@ function App() {
 
     async function openAddModal() {
         setShowAddModal(true);
+
         try {
-            const res = await fetch('/device/admin/unconfigured', {
-                headers: {
-                    'Authorization': `Bearer ${authToken}`
-                }
-            });
-            if (res.ok) {
-                const data = await res.json();
-                setExternalDevices(data);
-            } else {
-                console.error(`Failed to fetch unconfigured devices: ${res.status}`);
-                setExternalDevices([]);
+            const headers = {};
+            if (authToken) {
+                headers.Authorization = `Bearer ${authToken}`;
             }
+
+            const res = await fetch('/device/admin/unconfigured', { headers });
+
+            if (res.status === 401 || res.status === 403) {
+                console.warn("Not authorized to view unconfigured devices.");
+                setExternalDevices([]);
+                return;
+            }
+
+            if (!res.ok) {
+                const text = await res.text();
+                console.error(`Failed to fetch unconfigured devices: ${res.status} ${text}`);
+                setExternalDevices([]);
+                return;
+            }
+
+            const data = await res.json();
+            setExternalDevices(Array.isArray(data) ? data : (data.devices ?? []));
         } catch (err) {
             console.error('Error fetching unconfigured devices:', err);
             setExternalDevices([]);
@@ -78,7 +134,6 @@ function App() {
         setExternalDevices([]);
     }
 
-    // Called when user clicks a row in AddDeviceModal
     function handleSelectExternalDevice(apiDevice) {
         console.log('selected', apiDevice);
         setDeviceToConfigure(apiDevice);
@@ -86,7 +141,6 @@ function App() {
         setShowConfigureModal(true);
     }
 
-    // Called when ConfigureDeviceModal confirms Add
     function handleAddDevice(newDevice) {
         setDevices(prev => [...prev, newDevice]);
         setShowConfigureModal(false);
@@ -95,7 +149,6 @@ function App() {
 
     async function handleAddRoom(newRoom) {
         try {
-            // 1. Sends a POST request to the `/room` endpoint
             const response = await fetch('/room', {
                 method: 'POST',
                 headers: {
@@ -105,8 +158,8 @@ function App() {
                 body: JSON.stringify(newRoom),
             });
             if (response.ok) {
-                const createdRoom = await response.json(); // Get the new room from the response
-                setRooms(prevRooms => [...prevRooms, { ...createdRoom, devices: [] }]); // Add it to the state
+                const createdRoom = await response.json();
+                setRooms(prevRooms => [...prevRooms, { ...createdRoom, devices: [] }]);
             } else {
                 console.error("Failed to add room");
             }
@@ -130,7 +183,6 @@ function App() {
             });
             if (response.ok) {
                 console.log(`Scene ${sceneId} activated`);
-                // Optionally, you could show a success notification here
             } else {
                 console.error(`Failed to activate scene ${sceneId}`);
             }
@@ -141,7 +193,7 @@ function App() {
 
     function handleLogin(token) {
         setAuthToken(token);
-        setIsLoggedIn(true);
+        setIsLoggedIn(!!token);
         setLoggingIn(false);
     }
 
@@ -150,10 +202,9 @@ function App() {
         setIsLoggedIn(false);
     }
 
-    //Wyświetlanie
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
-        {/* Header */}
+            {/* Header */}
             <div className="border-b border-slate-200 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
                 <div className="w-full px-6 py-6">
                     <div className="flex items-center justify-between">
@@ -286,7 +337,6 @@ function App() {
                 )}
             </div>
 
-
             <LoggingInOpen
                 open={loggingIn}
                 onClose={() => setLoggingIn(false)}
@@ -321,7 +371,6 @@ function App() {
         </div>
     );
 
-    //Pobieranie danych z backendu!!!
     async function populateDeviceData() {
         const response = await fetch('/device');
         if (response.ok) {
@@ -337,7 +386,6 @@ function App() {
 
             const roomsData = await roomsResponse.json();
 
-            // For each room, fetch its devices
             const roomsWithDevices = await Promise.all(
                 roomsData.map(async (room) => {
                     const devicesResponse = await fetch(`/room/${room.id}/devices`);

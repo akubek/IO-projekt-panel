@@ -19,17 +19,16 @@ namespace IO_Panel.Server.Models
         public DeviceConfig Config { get; set; } = new();
 
         // UI/persistence specific fields
-        public DateTime LastSeen { get; set; } = DateTime.UtcNow;
+        public DateTimeOffset LastSeen { get; set; } = DateTimeOffset.UtcNow;
         public string Status { get; set; } = "Offline";   // e.g. Online/Offline low battery, etc.
         public string DisplayName { get; set; } = string.Empty; //name displayed in the IoT Panel
         public string? Localization { get; set; }          // if different naming is needed, not used yet
+        public DateTimeOffset? ConfiguredAt { get; set; } // when device was configured in the system
 
         // metadata from API
         // maps to ApiDevice.createdAt
-        public DateTimeOffset? CreatedAt { get; set; }
-
-        //If device is configured it is in the database - uncofigured devices are pulled from the external api
-        //public bool IsConfigured { get; set; } = false;
+        public DateTimeOffset? CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+        public bool Malfunctioning { get; set; } = false;
 
     }
 
