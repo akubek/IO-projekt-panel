@@ -10,6 +10,7 @@ public class AppDbContext : DbContext
     }
 
     public DbSet<DeviceEntity> Devices => Set<DeviceEntity>();
+    public DbSet<DeviceStateHistoryEntity> DeviceStateHistory => Set<DeviceStateHistoryEntity>();
     public DbSet<RoomEntity> Rooms => Set<RoomEntity>();
     public DbSet<RoomDeviceEntity> RoomDevices => Set<RoomDeviceEntity>();
 
@@ -25,10 +26,11 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<DeviceEntity>()
             .HasKey(d => d.Id);
 
+        DeviceStateHistoryEntity.Configure(modelBuilder);
+
         modelBuilder.Entity<RoomEntity>()
             .HasKey(r => r.Id);
 
-        // many-to-many Room <-> Device via join entity
         modelBuilder.Entity<RoomDeviceEntity>()
             .HasKey(x => new { x.RoomId, x.DeviceId });
 

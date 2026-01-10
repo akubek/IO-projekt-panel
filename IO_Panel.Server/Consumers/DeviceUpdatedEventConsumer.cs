@@ -1,5 +1,6 @@
 using IO_projekt_symulator.Server.Contracts;
 using IO_Panel.Server.Hubs;
+using IO_Panel.Server.Repositories;
 using MassTransit;
 using Microsoft.AspNetCore.SignalR;
 
@@ -9,13 +10,16 @@ public sealed class DeviceUpdatedEventConsumer : IConsumer<DeviceUpdatedEvent>
 {
     private readonly ILogger<DeviceUpdatedEventConsumer> _logger;
     private readonly IHubContext<DeviceUpdatesHub> _hubContext;
+    private readonly IDeviceRepository _deviceRepository;
 
     public DeviceUpdatedEventConsumer(
         ILogger<DeviceUpdatedEventConsumer> logger,
-        IHubContext<DeviceUpdatesHub> hubContext)
+        IHubContext<DeviceUpdatesHub> hubContext,
+        IDeviceRepository deviceRepository)
     {
         _logger = logger;
         _hubContext = hubContext;
+        _deviceRepository = deviceRepository;
     }
 
     public async Task Consume(ConsumeContext<DeviceUpdatedEvent> context)
@@ -28,6 +32,16 @@ public sealed class DeviceUpdatedEventConsumer : IConsumer<DeviceUpdatedEvent>
             message.Value,
             message.Unit,
             message.Malfunctioning);
+
+        if (message.Value.HasValue)
+        {
+            await _deviceRepository.AddDeviceHistoryPointAsync(
+                deviceId: message.DeviceId.ToString(),
+                value: message.Value.Value,
+                unit: message.Unit,
+                recordedAt: DateTimeOffset.UtcNow,
+                cancellationToken: context.CancellationToken);
+        }
 
         await _hubContext.Clients.All.SendAsync("deviceUpdated", message, context.CancellationToken);
     }

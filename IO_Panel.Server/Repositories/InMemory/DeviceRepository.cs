@@ -103,4 +103,26 @@ public class DeviceRepository : IDeviceRepository
         }
         return Task.CompletedTask;
     }
+
+    public Task<IReadOnlyList<DeviceStateHistoryPoint>> GetDeviceHistoryAsync(
+        string deviceId,
+        DateTimeOffset from,
+        DateTimeOffset to,
+        int limit,
+        CancellationToken cancellationToken = default)
+    {
+        // In-memory implementation: return an empty list as a placeholder
+        return Task.FromResult<IReadOnlyList<DeviceStateHistoryPoint>>(new List<DeviceStateHistoryPoint>());
+    }
+
+    public Task AddDeviceHistoryPointAsync(
+        string deviceId,
+        double value,
+        string? unit,
+        DateTimeOffset recordedAt,
+        CancellationToken cancellationToken = default)
+    {
+        // In-memory implementation: do nothing
+        return Task.CompletedTask;
+    }
 }

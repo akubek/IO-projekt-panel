@@ -3,6 +3,7 @@ using System;
 using IO_Panel.Server.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace IO_Panel.Server.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260110172059_AddDeviceStateHistory")]
+    partial class AddDeviceStateHistory
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "7.0.19");
@@ -106,7 +109,7 @@ namespace IO_Panel.Server.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime>("RecordedAtUtc")
+                    b.Property<DateTimeOffset>("RecordedAt")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Unit")
@@ -117,7 +120,7 @@ namespace IO_Panel.Server.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("DeviceId", "RecordedAtUtc");
+                    b.HasIndex("DeviceId", "RecordedAt");
 
                     b.ToTable("DeviceStateHistory");
                 });

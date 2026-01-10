@@ -1,4 +1,9 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using IO_Panel.Server.Data;
 using IO_Panel.Server.Data.Entities;
 using IO_Panel.Server.Mappers;
@@ -161,6 +166,83 @@ public sealed class EfDeviceRepository : IDeviceRepository
         }
 
         _db.Devices.Remove(entity);
+        await _db.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<DeviceStateHistoryPoint>> GetDeviceHistoryAsync(
+        string deviceId,
+        DateTimeOffset from,
+        DateTimeOffset to,
+        int limit,
+        CancellationToken cancellationToken = default)
+    {
+        limit = Math.Clamp(limit, 1, 2000);
+
+        var fromUtc = from.UtcDateTime;
+        var toUtc = to.UtcDateTime;
+
+        var rows = await _db.DeviceStateHistory
+            .AsNoTracking()
+            .Where(x => x.DeviceId == deviceId && x.RecordedAtUtc >= fromUtc && x.RecordedAtUtc <= toUtc)
+            .OrderByDescending(x => x.Id)
+            .Take(limit)
+            .Select(x => new DeviceStateHistoryPoint(
+                new DateTimeOffset(x.RecordedAtUtc, TimeSpan.Zero),
+                x.Value,
+                x.Unit))
+            .ToListAsync(cancellationToken);
+
+        rows.Reverse();
+        return rows;
+    }
+
+    public async Task AddDeviceHistoryPointAsync(
+        string deviceId,
+        double value,
+        string? unit,
+        DateTimeOffset recordedAt,
+        CancellationToken cancellationToken = default)
+    {
+        var exists = await _db.Devices
+            .AsNoTracking()
+            .AnyAsync(d => d.Id == deviceId, cancellationToken);
+
+        if (!exists)
+        {
+            return;
+        }
+
+        var dedupeWindow = TimeSpan.FromSeconds(10);
+
+        var last = await _db.DeviceStateHistory
+            .AsNoTracking()
+            .Where(x => x.DeviceId == deviceId)
+            .OrderByDescending(x => x.Id)
+            .Select(x => new { x.RecordedAtUtc, x.Value, x.Unit })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var recordedAtUtc = recordedAt.UtcDateTime;
+
+        if (last is not null)
+        {
+            var sameUnit = string.Equals(last.Unit, unit, StringComparison.OrdinalIgnoreCase);
+            var sameValue = Math.Abs(last.Value - value) <= 1e-9;
+            var withinWindow = (recordedAtUtc - last.RecordedAtUtc) <= dedupeWindow;
+
+            if (sameUnit && sameValue && withinWindow)
+            {
+                return;
+            }
+        }
+
+        _db.DeviceStateHistory.Add(new DeviceStateHistoryEntity
+        {
+            DeviceId = deviceId,
+            RecordedAtUtc = recordedAtUtc,
+            Value = value,
+            Unit = unit
+        });
+
         await _db.SaveChangesAsync(cancellationToken);
     }
 

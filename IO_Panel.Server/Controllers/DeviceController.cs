@@ -77,6 +77,7 @@ namespace IO_Panel.Server.Controllers
             }
 
             Device device = apiDevice.ToDomain(name: request.DisplayName, lastSeen: DateTime.UtcNow);
+            device.ConfiguredAt = DateTimeOffset.UtcNow;
 
             await _repo.AddAsync(device, ct);
 
@@ -115,7 +116,6 @@ namespace IO_Panel.Server.Controllers
                 return BadRequest("Device ID must be a valid GUID.");
             }
 
-            // Create the command object based on the shared contract
             var command = new SetDeviceStateCommand
             {
                 DeviceId = deviceIdGuid,
@@ -123,12 +123,10 @@ namespace IO_Panel.Server.Controllers
                 Unit = state.Unit
             };
 
-            // Publish the command to the message bus
             await _publishEndpoint.Publish(command, ct);
 
             _logger.LogInformation("Published SetDeviceStateCommand for DeviceId {DeviceId}", id);
 
-            // Return 'Accepted' to indicate the command has been queued for processing
             return Accepted(new { deviceId = id, state });
         }
 
@@ -151,6 +149,26 @@ namespace IO_Panel.Server.Controllers
 
             await _repo.DeleteAsync(id, ct);
             return NoContent();
+        }
+
+        [HttpGet("{id}/history")]
+        public async Task<ActionResult> GetHistory(
+            string id,
+            [FromQuery] DateTimeOffset? from,
+            [FromQuery] DateTimeOffset? to,
+            [FromQuery] int limit = 200,
+            CancellationToken ct = default)
+        {
+            var toValue = to ?? DateTimeOffset.UtcNow;
+            var fromValue = from ?? toValue.AddHours(-24);
+
+            if (fromValue > toValue)
+            {
+                return BadRequest("'from' must be <= 'to'.");
+            }
+
+            var history = await _repo.GetDeviceHistoryAsync(id, fromValue, toValue, limit, ct);
+            return Ok(history);
         }
 
         public record CommandDto

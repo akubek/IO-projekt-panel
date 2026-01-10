@@ -46,6 +46,9 @@ function App() {
     // deviceId -> { targetValue, unit, sentAtMs }
     const [pendingCommandsByDeviceId, setPendingCommandsByDeviceId] = useState({});
 
+    // deviceId -> number (increments whenever we get a live update)
+    const [deviceUpdateTicksById, setDeviceUpdateTicksById] = useState({});
+
     const roomNamesByDeviceId = useMemo(() => {
         const map = {};
 
@@ -130,6 +133,12 @@ function App() {
                     malfunctioning: update.malfunctioning ?? prev.malfunctioning
                 };
             });
+
+            // trigger a history refresh for that device
+            setDeviceUpdateTicksById((prev) => ({
+                ...prev,
+                [update.deviceId]: (prev[update.deviceId] ?? 0) + 1
+            }));
 
             // Clear "pending" when we reach the target value.
             setPendingCommandsByDeviceId((prev) => {
@@ -522,13 +531,6 @@ function App() {
                 </div>
             </div>
 
-            {/* Tekst widoczny tylko po zalogowaniu (Admin) */}
-            {isLoggedIn && (
-                <div className="w-full px-6 py-4 bg-red-100 border-l-4 border-red-500">
-                    <p className="text-red-700 font-bold">⚠️ Uwaga: Ten tekst widzą tylko zalogowani użytkownicy (ADMIN)! ⚠️</p>
-                </div>
-            )}
-
             {/* Tabs Navigation */}
             <div className="px-6 mt-6 border-b border-slate-200">
                 <div className="flex justify-between items-center">
@@ -613,6 +615,7 @@ function App() {
                         onSetValue={handleSetSliderDeviceValue}
                         pendingCommandsByDeviceId={pendingCommandsByDeviceId}
                         roomNamesByDeviceId={roomNamesByDeviceId}
+                        onSelectDevice={(device) => setSelectedDevice(device)}
                     />
                 )}
 
@@ -675,6 +678,9 @@ function App() {
                 open={!!selectedDevice}
                 device={selectedDevice}
                 onClose={() => setSelectedDevice(null)}
+                onToggle={handleToggleDevice}
+                onSetValue={handleSetSliderDeviceValue}
+                refreshToken={deviceUpdateTicksById[selectedDevice?.id] ?? 0}
             />
 
             <CreateSceneModal
