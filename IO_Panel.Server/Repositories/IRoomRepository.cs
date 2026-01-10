@@ -14,6 +14,7 @@ namespace IO_Panel.Server.Repositories
         Task DeleteAsync(Guid id);
 
         Task AddDeviceToRoomAsync(Guid roomId, string deviceId);
+        Task RemoveDeviceFromRoomAsync(Guid roomId, string deviceId);
         Task<IEnumerable<Device>> GetDevicesInRoomAsync(Guid roomId);
     }
 }

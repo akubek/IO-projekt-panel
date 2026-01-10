@@ -5,6 +5,7 @@ using IO_Panel.Server.Hubs;
 using IO_Panel.Server.Models;
 using IO_Panel.Server.Repositories;
 using IO_Panel.Server.Repositories.Ef;
+using IO_Panel.Server.Services.Automations;
 using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -84,6 +85,8 @@ builder.Services.AddAuthorization();
 var sqliteConnectionString = builder.Configuration.GetConnectionString("AppDb")
     ?? "Data Source=app.db";
 
+Console.WriteLine($"SQLite connection: {sqliteConnectionString}");
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(sqliteConnectionString));
 
@@ -121,6 +124,7 @@ builder.Services.AddScoped<IDeviceRepository, EfDeviceRepository>();
 builder.Services.AddScoped<IRoomRepository, EfRoomRepository>();
 builder.Services.AddScoped<ISceneRepository, EfSceneRepository>();
 builder.Services.AddScoped<IAutomationRepository, EfAutomationRepository>();
+builder.Services.AddScoped<IAutomationRunner, AutomationRunner>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -129,6 +133,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton<IPasswordHasher<AdminUser>, PasswordHasher<AdminUser>>();
 
 builder.Services.AddSignalR();
+builder.Services.AddHostedService<IO_Panel.Server.Services.Automations.AutomationPeriodicEvaluator>();
 
 var app = builder.Build();
 

@@ -1,14 +1,11 @@
 ﻿import { useEffect, useState, useMemo } from 'react';
 import './App.css';
-import DeviceCard from './components/DeviceCard';
 import LoggingInOpen from './components/LoggingInOpen';
 import AddDeviceModal from './components/AddDeviceModal';
 import ConfigureDeviceModal from './components/ConfigureDeviceModal';
 import { Plus, Cpu, User, Home, LayoutGrid, Film, Zap } from "lucide-react";
-import { AnimatePresence } from "framer-motion";
 import Button from "@mui/material/Button";
 import { CircleDot } from "lucide-react";
-import { motion } from "framer-motion";
 import RoomList from './components/RoomList';
 import SceneList from './components/SceneList';
 import AutomationList from './components/AutomationList';
@@ -16,7 +13,9 @@ import AddRoomModal from './components/AddRoomModal';
 import DeviceDetailsModal from './components/DeviceDetailsModal';
 import AddDeviceToRoomModal from './components/AddDeviceToRoomModal';
 import CreateSceneModal from './components/CreateSceneModal';
+import CreateAutomationModal from './components/CreateAutomationModal';
 import * as signalR from "@microsoft/signalr";
+import DeviceList from './components/DeviceList';
 
 function App() {
     const [devices, setDevices] = useState([]);
@@ -43,10 +42,9 @@ function App() {
 
     const [showCreateSceneModal, setShowCreateSceneModal] = useState(false);
 
-    // deviceId -> { targetValue, unit, sentAtMs }
-    const [pendingCommandsByDeviceId, setPendingCommandsByDeviceId] = useState({});
+    const [showCreateAutomationModal, setShowCreateAutomationModal] = useState(false);
 
-    // deviceId -> number (increments whenever we get a live update)
+    const [pendingCommandsByDeviceId, setPendingCommandsByDeviceId] = useState({});
     const [deviceUpdateTicksById, setDeviceUpdateTicksById] = useState({});
 
     const roomNamesByDeviceId = useMemo(() => {
@@ -134,13 +132,11 @@ function App() {
                 };
             });
 
-            // trigger a history refresh for that device
             setDeviceUpdateTicksById((prev) => ({
                 ...prev,
                 [update.deviceId]: (prev[update.deviceId] ?? 0) + 1
             }));
 
-            // Clear "pending" when we reach the target value.
             setPendingCommandsByDeviceId((prev) => {
                 const pending = prev[update.deviceId];
                 if (!pending) {
@@ -248,6 +244,35 @@ function App() {
         }
     }
 
+    async function handleRemoveDeviceFromRoom(roomId, deviceId) {
+        if (!authToken) return;
+
+        try {
+            const res = await fetch(`/room/${roomId}/devices/${deviceId}`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${authToken}` }
+            });
+
+            if (!res.ok) {
+                const text = await res.text();
+                console.error(`Failed to remove device from room: ${res.status} ${text}`);
+                return;
+            }
+
+            setRooms(prev =>
+                prev.map(r => {
+                    if (r.id !== roomId) {
+                        return r;
+                    }
+
+                    return { ...r, devices: (r.devices ?? []).filter(d => d.id !== deviceId) };
+                })
+            );
+        } catch (err) {
+            console.error("Error removing device from room:", err);
+        }
+    }
+
     function closeConfigureModal() {
         setShowConfigureModal(false);
         setDeviceToConfigure(null);
@@ -344,6 +369,33 @@ function App() {
         }
     }
 
+    async function handleToggleAutomationEnabled(automation, nextEnabled) {
+        if (!authToken) return;
+
+        try {
+            const res = await fetch(`/automation/${automation.id}`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${authToken}`
+                },
+                body: JSON.stringify({ ...automation, isEnabled: !!nextEnabled })
+            });
+
+            if (!res.ok) {
+                const text = await res.text();
+                console.error(`Failed to update automation: ${res.status} ${text}`);
+                return;
+            }
+
+            setAutomations((prev) =>
+                prev.map((a) => (a.id === automation.id ? { ...a, isEnabled: !!nextEnabled } : a))
+            );
+        } catch (err) {
+            console.error("Error updating automation:", err);
+        }
+    }
+
     async function handleDeleteDevice(deviceId) {
         if (!authToken) return;
 
@@ -412,6 +464,10 @@ function App() {
 
     function handleSceneCreated(createdScene) {
         setScenes(prev => [...prev, createdScene]);
+    }
+
+    function handleAutomationCreated(createdAutomation) {
+        setAutomations(prev => [...prev, createdAutomation]);
     }
 
     async function sendDeviceState(deviceId, state) {
@@ -495,6 +551,7 @@ function App() {
                                         ? "bg-blue-50 border-blue-200 text-blue-700"
                                         : "bg-slate-100 border-slate-300 text-slate-600"}`}>
 
+
                                     <span className="font-semibold">{isLoggedIn ? "Admin" : "User"}</span>
                                     <span className="flex items-center gap-1 text-xs opacity-80">
                                         <CircleDot className="w-3 h-3" />
@@ -577,32 +634,31 @@ function App() {
                             Add Scene
                         </Button>
                     )}
+
+                    {isLoggedIn && activeTab === 'automations' && (
+                        <Button
+                            onClick={() => setShowCreateAutomationModal(true)}
+                            className="bg-gradient-to-r !text-white from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 shadow-lg">
+                            <Plus className="w-4 h-4 mr-2" />
+                            Add Automation
+                        </Button>
+                    )}
                 </div>
             </div>
 
             {/* Conditional Content */}
             <div className="mt-10">
                 {activeTab === 'devices' && (
-                    <motion.div
-                        layout
-                        className="px-6 grid gap-2 justify-start [grid-template-columns:repeat(auto-fit,minmax(320px,384px))] items-start"
-                    >
-                        <AnimatePresence mode="popLayout">
-                            {devices.map((device) => (
-                                <DeviceCard
-                                    key={device.id}
-                                    device={device}
-                                    roomNames={roomNamesByDeviceId?.[device.id] ?? []}
-                                    isAdmin={isLoggedIn}
-                                    onDelete={() => handleDeleteDevice(device.id)}
-                                    onSelect={() => setSelectedDevice(device)}
-                                    onToggle={handleToggleDevice}
-                                    onSetValue={handleSetSliderDeviceValue}
-                                    pendingCommand={pendingCommandsByDeviceId[device.id] ?? null}
-                                />)
-                            )}
-                        </AnimatePresence>
-                    </motion.div>
+                    <DeviceList
+                        devices={devices}
+                        roomNamesByDeviceId={roomNamesByDeviceId}
+                        isAdmin={isLoggedIn}
+                        onDelete={(deviceId) => handleDeleteDevice(deviceId)}
+                        onSelect={(device) => setSelectedDevice(device)}
+                        onToggle={handleToggleDevice}
+                        onSetValue={handleSetSliderDeviceValue}
+                        pendingCommandsByDeviceId={pendingCommandsByDeviceId}
+                    />
                 )}
 
                 {activeTab === 'rooms' && (
@@ -611,6 +667,7 @@ function App() {
                         isAdmin={isLoggedIn}
                         onAddDevice={openAddDeviceToRoom}
                         onDelete={handleDeleteRoom}
+                        onRemoveDevice={handleRemoveDeviceFromRoom}
                         onToggle={handleToggleDevice}
                         onSetValue={handleSetSliderDeviceValue}
                         pendingCommandsByDeviceId={pendingCommandsByDeviceId}
@@ -635,6 +692,9 @@ function App() {
                         automations={automations}
                         isAdmin={isLoggedIn}
                         onDelete={handleDeleteAutomation}
+                        onToggleEnabled={handleToggleAutomationEnabled}
+                        devices={devices}
+                        scenes={scenes}
                     />
                 )}
             </div>
@@ -689,6 +749,15 @@ function App() {
                 authToken={authToken}
                 onClose={() => setShowCreateSceneModal(false)}
                 onCreated={handleSceneCreated}
+            />
+
+            <CreateAutomationModal
+                open={showCreateAutomationModal}
+                devices={devices}
+                scenes={scenes}
+                authToken={authToken}
+                onClose={() => setShowCreateAutomationModal(false)}
+                onCreated={handleAutomationCreated}
             />
         </div>
     );

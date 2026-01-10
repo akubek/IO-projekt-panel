@@ -93,12 +93,9 @@ public sealed class EfRoomRepository : IRoomRepository
             return;
         }
 
-        // Ensure device exists in persistent store.
-        // If you're not on EfDeviceRepository yet, this may not be desired; see note below.
         var device = await _db.Devices.AsNoTracking().SingleOrDefaultAsync(d => d.Id == deviceId);
         if (device is null)
         {
-            // If device isn't persisted, we don't create a dangling relation.
             return;
         }
 
@@ -117,6 +114,20 @@ public sealed class EfRoomRepository : IRoomRepository
         await _db.SaveChangesAsync();
     }
 
+    public async Task RemoveDeviceFromRoomAsync(Guid roomId, string deviceId)
+    {
+        var link = await _db.RoomDevices
+            .SingleOrDefaultAsync(x => x.RoomId == roomId && x.DeviceId == deviceId);
+
+        if (link is null)
+        {
+            return;
+        }
+
+        _db.RoomDevices.Remove(link);
+        await _db.SaveChangesAsync();
+    }
+
     public async Task<IEnumerable<Device>> GetDevicesInRoomAsync(Guid roomId)
     {
         var deviceIds = await _db.RoomDevices
@@ -130,7 +141,6 @@ public sealed class EfRoomRepository : IRoomRepository
             return Array.Empty<Device>();
         }
 
-        // Keep behavior consistent with existing code: reuse device repository (which may enrich from external API).
         var tasks = deviceIds.Select(id => _deviceRepository.GetByIdAsync(id));
         var devices = await Task.WhenAll(tasks);
 

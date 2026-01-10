@@ -1,15 +1,22 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Home, Tv, Plus, Trash2 } from 'lucide-react';
+import { Home, Tv, Plus, Trash2, Unlink } from 'lucide-react';
 import DeviceCard from './DeviceCard';
 
-const RoomCard = ({ room, isAdmin, onAddDevice, onDelete, onToggle, onSetValue, pendingCommandsByDeviceId, roomNamesByDeviceId, onSelectDevice }) => {
+const RoomCard = ({ room, isAdmin, onAddDevice, onDelete, onRemoveDevice, onToggle, onSetValue, pendingCommandsByDeviceId, roomNamesByDeviceId, onSelectDevice }) => {
     const deviceCount = room.devices?.length || 0;
 
     const handleDelete = (e) => {
         e.stopPropagation();
         if (onDelete) {
             onDelete(room.id);
+        }
+    };
+
+    const handleRemoveDevice = (e, deviceId) => {
+        e.stopPropagation();
+        if (onRemoveDevice) {
+            onRemoveDevice(room.id, deviceId);
         }
     };
 
@@ -64,15 +71,28 @@ const RoomCard = ({ room, isAdmin, onAddDevice, onDelete, onToggle, onSetValue, 
                     <div className="mt-4 grid gap-2 justify-start [grid-template-columns:repeat(auto-fit,minmax(320px,384px))] items-start">
                         <AnimatePresence mode="popLayout">
                             {room.devices.map((device) => (
-                                <DeviceCard
-                                    key={device.id}
-                                    device={device}
-                                    onSelect={() => onSelectDevice && onSelectDevice(device)}
-                                    onToggle={onToggle}
-                                    onSetValue={onSetValue}
-                                    pendingCommand={pendingCommandsByDeviceId?.[device.id] ?? null}
-                                    roomNames={roomNamesByDeviceId?.[device.id] ?? []}
-                                />
+                                <div key={device.id} className="relative">
+                                    {isAdmin && (
+                                        <button
+                                            type="button"
+                                            onClick={(e) => handleRemoveDevice(e, device.id)}
+                                            className="absolute right-3 top-3 z-10 inline-flex items-center justify-center w-10 h-10 rounded-md bg-white/90 border border-slate-200 shadow hover:bg-slate-50"
+                                            aria-label={`Remove ${device.displayName ?? device.id} from room ${room.name}`}
+                                            title="Remove from room"
+                                        >
+                                            <Unlink className="w-4 h-4 text-slate-700" />
+                                        </button>
+                                    )}
+
+                                    <DeviceCard
+                                        device={device}
+                                        onSelect={() => onSelectDevice && onSelectDevice(device)}
+                                        onToggle={onToggle}
+                                        onSetValue={onSetValue}
+                                        pendingCommand={pendingCommandsByDeviceId?.[device.id] ?? null}
+                                        roomNames={roomNamesByDeviceId?.[device.id] ?? []}
+                                    />
+                                </div>
                             ))}
                         </AnimatePresence>
                     </div>

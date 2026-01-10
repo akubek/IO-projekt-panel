@@ -1,3 +1,4 @@
+using System.Text.Json;
 using IO_Panel.Server.Data;
 using IO_Panel.Server.Data.Entities;
 using IO_Panel.Server.Models;
@@ -7,6 +8,8 @@ namespace IO_Panel.Server.Repositories.Ef;
 
 public sealed class EfAutomationRepository : IAutomationRepository
 {
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
     private readonly AppDbContext _db;
 
     public EfAutomationRepository(AppDbContext db)
@@ -24,7 +27,8 @@ public sealed class EfAutomationRepository : IAutomationRepository
                 Id = a.Id,
                 Name = a.Name,
                 IsEnabled = a.IsEnabled,
-                LogicDefinition = a.LogicDefinition
+                Trigger = SafeDeserialize(a.TriggerJson, new AutomationTrigger()),
+                Action = SafeDeserialize(a.ActionJson, new AutomationAction())
             })
             .ToListAsync();
     }
@@ -39,7 +43,8 @@ public sealed class EfAutomationRepository : IAutomationRepository
                 Id = a.Id,
                 Name = a.Name,
                 IsEnabled = a.IsEnabled,
-                LogicDefinition = a.LogicDefinition
+                Trigger = SafeDeserialize(a.TriggerJson, new AutomationTrigger()),
+                Action = SafeDeserialize(a.ActionJson, new AutomationAction())
             })
             .SingleOrDefaultAsync();
     }
@@ -56,7 +61,8 @@ public sealed class EfAutomationRepository : IAutomationRepository
             Id = automation.Id,
             Name = automation.Name,
             IsEnabled = automation.IsEnabled,
-            LogicDefinition = automation.LogicDefinition
+            TriggerJson = JsonSerializer.Serialize(automation.Trigger ?? new AutomationTrigger(), JsonOptions),
+            ActionJson = JsonSerializer.Serialize(automation.Action ?? new AutomationAction(), JsonOptions)
         };
 
         _db.Automations.Add(entity);
@@ -73,7 +79,8 @@ public sealed class EfAutomationRepository : IAutomationRepository
 
         entity.Name = automation.Name;
         entity.IsEnabled = automation.IsEnabled;
-        entity.LogicDefinition = automation.LogicDefinition;
+        entity.TriggerJson = JsonSerializer.Serialize(automation.Trigger ?? new AutomationTrigger(), JsonOptions);
+        entity.ActionJson = JsonSerializer.Serialize(automation.Action ?? new AutomationAction(), JsonOptions);
 
         await _db.SaveChangesAsync();
     }
@@ -88,5 +95,22 @@ public sealed class EfAutomationRepository : IAutomationRepository
 
         _db.Automations.Remove(entity);
         await _db.SaveChangesAsync();
+    }
+
+    private static T SafeDeserialize<T>(string json, T fallback)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return fallback;
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<T>(json, JsonOptions) ?? fallback;
+        }
+        catch
+        {
+            return fallback;
+        }
     }
 }

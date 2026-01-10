@@ -80,6 +80,17 @@ namespace IO_Panel.Server.Controllers
         }
 
         [Authorize(Roles = "Admin")]
+        [HttpDelete("{roomId}/devices/{deviceId}")]
+        public async Task<IActionResult> RemoveDevice(Guid roomId, string deviceId)
+        {
+            var room = await _roomRepo.GetByIdAsync(roomId);
+            if (room == null) return NotFound("Room not found");
+
+            await _roomRepo.RemoveDeviceFromRoomAsync(roomId, deviceId);
+            return NoContent();
+        }
+
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {

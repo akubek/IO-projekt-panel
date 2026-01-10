@@ -1,7 +1,7 @@
 import React from 'react';
 import RoomCard from './RoomCard';
 
-function RoomList({ rooms, isAdmin, onAddDevice, onDelete, onToggle, onSetValue, pendingCommandsByDeviceId, roomNamesByDeviceId, onSelectDevice }) {
+function RoomList({ rooms, isAdmin, onAddDevice, onDelete, onRemoveDevice, onToggle, onSetValue, pendingCommandsByDeviceId, roomNamesByDeviceId, onSelectDevice }) {
     if (!rooms || rooms.length === 0) {
         return <p className="px-6 text-slate-500">No rooms found. Add a room to get started.</p>;
     }
@@ -15,6 +15,7 @@ function RoomList({ rooms, isAdmin, onAddDevice, onDelete, onToggle, onSetValue,
                     isAdmin={isAdmin}
                     onAddDevice={onAddDevice}
                     onDelete={onDelete}
+                    onRemoveDevice={onRemoveDevice}
                     onToggle={onToggle}
                     onSetValue={onSetValue}
                     pendingCommandsByDeviceId={pendingCommandsByDeviceId}
