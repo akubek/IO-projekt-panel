@@ -1,10 +1,12 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using IO_Panel.Server.Models;
 using IO_Panel.Server.Repositories;
+using MassTransit;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using MassTransit;
 using IO_projekt_symulator.Server.Contracts;
 
 namespace IO_Panel.Server.Controllers
@@ -26,6 +28,9 @@ namespace IO_Panel.Server.Controllers
             _publishEndpoint = publishEndpoint;
         }
 
+        public sealed record CreateSceneRequest(string Name, bool IsPublic, SceneActionDto[] Actions);
+        public sealed record SceneActionDto(string DeviceId, DeviceState TargetState);
+
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -44,17 +49,36 @@ namespace IO_Panel.Server.Controllers
             return Ok(scene);
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] Scene scene)
+        public async Task<IActionResult> Create([FromBody] CreateSceneRequest request)
         {
-            if (scene == null)
+            if (request is null)
             {
                 return BadRequest();
             }
+
+            if (string.IsNullOrWhiteSpace(request.Name))
+            {
+                return BadRequest("Scene name is required.");
+            }
+
+            var scene = new Scene
+            {
+                Name = request.Name.Trim(),
+                IsPublic = request.IsPublic,
+                Actions = request.Actions?.Select(a => new SceneAction
+                {
+                    DeviceId = a.DeviceId,
+                    TargetState = a.TargetState
+                }).ToList() ?? new()
+            };
+
             await _sceneRepository.AddAsync(scene);
             return CreatedAtAction(nameof(GetById), new { id = scene.Id }, scene);
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] Scene scene)
         {
@@ -73,6 +97,7 @@ namespace IO_Panel.Server.Controllers
             return NoContent();
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
@@ -95,11 +120,14 @@ namespace IO_Panel.Server.Controllers
                 return NotFound();
             }
 
-            //for each scene action publish a command.
-            //might be better to batch these in the future depending on scene sizes
+            if (!scene.IsPublic && !(User?.Identity?.IsAuthenticated ?? false))
+            {
+                return Unauthorized();
+            }
+
             foreach (var action in scene.Actions)
             {
-                if (Guid.TryParse(action.DeviceId, out var deviceIdGuid))   //check if device id is a valid guid
+                if (Guid.TryParse(action.DeviceId, out var deviceIdGuid))
                 {
                     var command = new SetDeviceStateCommand
                     {

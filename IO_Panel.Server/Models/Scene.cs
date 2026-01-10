@@ -7,6 +7,7 @@ namespace IO_Panel.Server.Models
     {
         public Guid Id { get; set; }
         public string Name { get; set; } = string.Empty;
+        public bool IsPublic { get; set; }
         public List<SceneAction> Actions { get; set; } = new();
     }
 

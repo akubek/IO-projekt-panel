@@ -15,6 +15,7 @@ import AutomationList from './components/AutomationList';
 import AddRoomModal from './components/AddRoomModal';
 import DeviceDetailsModal from './components/DeviceDetailsModal';
 import AddDeviceToRoomModal from './components/AddDeviceToRoomModal';
+import CreateSceneModal from './components/CreateSceneModal';
 import * as signalR from "@microsoft/signalr";
 
 function App() {
@@ -39,6 +40,8 @@ function App() {
 
     const [showAddDeviceToRoomModal, setShowAddDeviceToRoomModal] = useState(false);
     const [roomToAddDevice, setRoomToAddDevice] = useState(null);
+
+    const [showCreateSceneModal, setShowCreateSceneModal] = useState(false);
 
     useEffect(() => {
         populateAllData();
@@ -261,6 +264,10 @@ function App() {
         );
     }
 
+    function handleSceneCreated(createdScene) {
+        setScenes(prev => [...prev, createdScene]);
+    }
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
             {/* Header */}
@@ -282,10 +289,8 @@ function App() {
                                     className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium shadow-sm border ${isLoggedIn
                                         ? "bg-blue-50 border-blue-200 text-blue-700"
                                         : "bg-slate-100 border-slate-300 text-slate-600"}`}>
-                                    {isLoggedIn ? (<span className="font-semibold">Admin</span>
-                                    ) : (
-                                        <span className="font-semibold">User</span>
-                                    )}
+
+                                    <span className="font-semibold">{isLoggedIn ? "Admin" : "User"}</span>
                                     <span className="flex items-center gap-1 text-xs opacity-80">
                                         <CircleDot className="w-3 h-3" />
                                         active
@@ -366,6 +371,15 @@ function App() {
                             Add Room
                         </Button>
                     )}
+
+                    {isLoggedIn && activeTab === 'scenes' && (
+                        <Button
+                            onClick={() => setShowCreateSceneModal(true)}
+                            className="bg-gradient-to-r !text-white from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 shadow-lg">
+                            <Plus className="w-4 h-4 mr-2" />
+                            Add Scene
+                        </Button>
+                    )}
                 </div>
             </div>
 
@@ -392,7 +406,12 @@ function App() {
                 )}
 
                 {activeTab === 'scenes' && (
-                    <SceneList scenes={scenes} onActivate={handleActivateScene} />
+                    <SceneList
+                        scenes={scenes}
+                        onActivate={handleActivateScene}
+                        isLoggedIn={isLoggedIn}
+                        devices={devices}
+                    />
                 )}
 
                 {activeTab === 'automations' && (
@@ -439,6 +458,14 @@ function App() {
                 open={!!selectedDevice}
                 device={selectedDevice}
                 onClose={() => setSelectedDevice(null)}
+            />
+
+            <CreateSceneModal
+                open={showCreateSceneModal}
+                devices={devices}
+                authToken={authToken}
+                onClose={() => setShowCreateSceneModal(false)}
+                onCreated={handleSceneCreated}
             />
         </div>
     );
