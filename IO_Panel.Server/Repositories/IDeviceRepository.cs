@@ -1,5 +1,4 @@
 using IO_Panel.Server.Models;
-using IO_Panel.Server.Repositories.Entities;
 
 namespace IO_Panel.Server.Repositories;
 

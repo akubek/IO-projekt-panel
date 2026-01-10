@@ -78,5 +78,19 @@ namespace IO_Panel.Server.Controllers
 
             return Ok();
         }
+
+        [Authorize(Roles = "Admin")]
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(Guid id)
+        {
+            var room = await _roomRepo.GetByIdAsync(id);
+            if (room == null)
+            {
+                return NotFound();
+            }
+
+            await _roomRepo.DeleteAsync(id);
+            return NoContent();
+        }
     }
 }

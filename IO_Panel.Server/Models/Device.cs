@@ -1,5 +1,3 @@
-using IO_Panel.Server.Mappers;
-using IO_Panel.Server.Repositories.Entities;
 
 namespace IO_Panel.Server.Models
 {

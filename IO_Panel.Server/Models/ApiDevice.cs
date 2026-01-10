@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace IO_Panel.Server.Repositories.Entities
+namespace IO_Panel.Server.Models
 {
     public class ApiDevice
     {

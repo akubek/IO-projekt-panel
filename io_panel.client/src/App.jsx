@@ -43,6 +43,9 @@ function App() {
 
     const [showCreateSceneModal, setShowCreateSceneModal] = useState(false);
 
+    // deviceId -> { targetValue, unit, sentAtMs }
+    const [pendingCommandsByDeviceId, setPendingCommandsByDeviceId] = useState({});
+
     useEffect(() => {
         populateAllData();
     }, []);
@@ -113,6 +116,27 @@ function App() {
                     },
                     malfunctioning: update.malfunctioning ?? prev.malfunctioning
                 };
+            });
+
+            // Clear "pending" when we reach the target value.
+            setPendingCommandsByDeviceId((prev) => {
+                const pending = prev[update.deviceId];
+                if (!pending) {
+                    return prev;
+                }
+
+                const updateValue = update.value;
+                if (typeof updateValue !== "number") {
+                    return prev;
+                }
+
+                const eps = 1e-6;
+                if (Math.abs(updateValue - pending.targetValue) > eps) {
+                    return prev;
+                }
+
+                const { [update.deviceId]: _, ...rest } = prev;
+                return rest;
             });
         });
 
@@ -226,6 +250,106 @@ function App() {
         }
     }
 
+    async function handleDeleteRoom(roomId) {
+        if (!authToken) return;
+
+        const ok = window.confirm("Delete this room?");
+        if (!ok) return;
+
+        try {
+            const res = await fetch(`/room/${roomId}`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${authToken}` }
+            });
+
+            if (!res.ok) {
+                const text = await res.text();
+                console.error(`Failed to delete room: ${res.status} ${text}`);
+                return;
+            }
+
+            setRooms(prev => prev.filter(r => r.id !== roomId));
+        } catch (err) {
+            console.error("Error deleting room:", err);
+        }
+    }
+
+    async function handleDeleteScene(sceneId) {
+        if (!authToken) return;
+
+        const ok = window.confirm("Delete this scene?");
+        if (!ok) return;
+
+        try {
+            const res = await fetch(`/scene/${sceneId}`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${authToken}` }
+            });
+
+            if (!res.ok) {
+                const text = await res.text();
+                console.error(`Failed to delete scene: ${res.status} ${text}`);
+                return;
+            }
+
+            setScenes(prev => prev.filter(s => s.id !== sceneId));
+        } catch (err) {
+            console.error("Error deleting scene:", err);
+        }
+    }
+
+    async function handleDeleteAutomation(automationId) {
+        if (!authToken) return;
+
+        const ok = window.confirm("Delete this automation?");
+        if (!ok) return;
+
+        try {
+            const res = await fetch(`/automation/${automationId}`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${authToken}` }
+            });
+
+            if (!res.ok) {
+                const text = await res.text();
+                console.error(`Failed to delete automation: ${res.status} ${text}`);
+                return;
+            }
+
+            setAutomations(prev => prev.filter(a => a.id !== automationId));
+        } catch (err) {
+            console.error("Error deleting automation:", err);
+        }
+    }
+
+    async function handleDeleteDevice(deviceId) {
+        if (!authToken) return;
+
+        const ok = window.confirm("Delete this device? It will be removed from all rooms.");
+        if (!ok) return;
+
+        try {
+            const res = await fetch(`/device/admin/${deviceId}`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${authToken}` }
+            });
+
+            if (!res.ok) {
+                const text = await res.text();
+                console.error(`Failed to delete device: ${res.status} ${text}`);
+                return;
+            }
+
+            setDevices(prev => prev.filter(d => d.id !== deviceId));
+            setRooms(prev =>
+                prev.map(r => ({ ...r, devices: (r.devices ?? []).filter(d => d.id !== deviceId) }))
+            );
+            setSelectedDevice(prev => (prev?.id === deviceId ? null : prev));
+        } catch (err) {
+            console.error("Error deleting device:", err);
+        }
+    }
+
     function handleLogin(token) {
         setAuthToken(token);
         setIsLoggedIn(!!token);
@@ -266,6 +390,106 @@ function App() {
 
     function handleSceneCreated(createdScene) {
         setScenes(prev => [...prev, createdScene]);
+    }
+
+    async function sendDeviceState(deviceId, state) {
+        try {
+            const headers = {
+                'Content-Type': 'application/json',
+                ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
+            };
+
+            const res = await fetch(`/device/${deviceId}/state`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(state)
+            });
+
+            if (!res.ok) {
+                const text = await res.text();
+                console.error(`Failed to send device state: ${res.status} ${text}`);
+            }
+        } catch (err) {
+            console.error("Error sending device state:", err);
+        }
+    }
+
+    async function refreshDevice(deviceId) {
+        try {
+            const res = await fetch(`/device/${deviceId}`);
+            if (!res.ok) {
+                return;
+            }
+
+            const device = await res.json();
+
+            setDevices((prev) => prev.map(d => (d.id === deviceId ? device : d)));
+
+            setRooms((prevRooms) =>
+                prevRooms.map((room) => ({
+                    ...room,
+                    devices: (room.devices ?? []).map((d) => (d.id === deviceId ? device : d))
+                }))
+            );
+
+            setSelectedDevice((prev) => (prev?.id === deviceId ? device : prev));
+        } catch (err) {
+            console.error("Error refreshing device:", err);
+        }
+    }
+
+    function markDevicePending(deviceId, targetValue, unit) {
+        const sentAtMs = Date.now();
+
+        setPendingCommandsByDeviceId((prev) => ({
+            ...prev,
+            [deviceId]: { targetValue, unit, sentAtMs }
+        }));
+
+        window.setTimeout(() => {
+            setPendingCommandsByDeviceId((prev) => {
+                const pending = prev[deviceId];
+                if (!pending) {
+                    return prev; // already resolved via SignalR
+                }
+
+                // Only act if this timeout corresponds to the latest command for this device
+                if (pending.sentAtMs !== sentAtMs) {
+                    return prev;
+                }
+
+                void refreshDevice(deviceId);
+
+                const { [deviceId]: _, ...rest } = prev;
+                return rest;
+            });
+        }, 1500);
+    }
+
+    function handleToggleDevice(device, nextIsOn) {
+        if (!device) return;
+        if (device.config?.readOnly) return;
+
+        const value = nextIsOn ? 1 : 0;
+
+        const unit =
+            device.state?.unit ??
+            (device.type === "switch" ? "bool" : null);
+
+        markDevicePending(device.id, value, unit);
+
+        void sendDeviceState(device.id, { value, unit });
+    }
+
+    function handleSetSliderDeviceValue(device, value) {
+        if (!device) return;
+        if (device.config?.readOnly) return;
+
+        const unit = device.state?.unit ?? null;
+
+        markDevicePending(device.id, value, unit);
+
+        void sendDeviceState(device.id, { value, unit });
     }
 
     return (
@@ -395,14 +619,28 @@ function App() {
                                 <DeviceCard
                                     key={device.id}
                                     device={device}
-                                    onSelect={() => setSelectedDevice(device)} />)
+                                    isAdmin={isLoggedIn}
+                                    onDelete={() => handleDeleteDevice(device.id)}
+                                    onSelect={() => setSelectedDevice(device)}
+                                    onToggle={handleToggleDevice}
+                                    onSetValue={handleSetSliderDeviceValue}
+                                    pendingCommand={pendingCommandsByDeviceId[device.id] ?? null}
+                                />)
                             )}
                         </AnimatePresence>
                     </motion.div>
                 )}
 
                 {activeTab === 'rooms' && (
-                    <RoomList rooms={rooms} isAdmin={isLoggedIn} onAddDevice={openAddDeviceToRoom} />
+                    <RoomList
+                        rooms={rooms}
+                        isAdmin={isLoggedIn}
+                        onAddDevice={openAddDeviceToRoom}
+                        onDelete={handleDeleteRoom}
+                        onToggle={handleToggleDevice}
+                        onSetValue={handleSetSliderDeviceValue}
+                        pendingCommandsByDeviceId={pendingCommandsByDeviceId}
+                    />
                 )}
 
                 {activeTab === 'scenes' && (
@@ -411,11 +649,17 @@ function App() {
                         onActivate={handleActivateScene}
                         isLoggedIn={isLoggedIn}
                         devices={devices}
+                        isAdmin={isLoggedIn}
+                        onDelete={handleDeleteScene}
                     />
                 )}
 
                 {activeTab === 'automations' && (
-                    <AutomationList automations={automations} />
+                    <AutomationList
+                        automations={automations}
+                        isAdmin={isLoggedIn}
+                        onDelete={handleDeleteAutomation}
+                    />
                 )}
             </div>
 

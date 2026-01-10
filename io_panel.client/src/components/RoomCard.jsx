@@ -1,10 +1,17 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Home, Tv, Plus } from 'lucide-react';
+import { Home, Tv, Plus, Trash2 } from 'lucide-react';
 import DeviceCard from './DeviceCard';
 
-const RoomCard = ({ room, isAdmin, onAddDevice }) => {
+const RoomCard = ({ room, isAdmin, onAddDevice, onDelete, onToggle, onSetValue, pendingCommandsByDeviceId }) => {
     const deviceCount = room.devices?.length || 0;
+
+    const handleDelete = (e) => {
+        e.stopPropagation();
+        if (onDelete) {
+            onDelete(room.id);
+        }
+    };
 
     return (
         <motion.div
@@ -16,24 +23,36 @@ const RoomCard = ({ room, isAdmin, onAddDevice }) => {
             className="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden"
         >
             <div className="p-4">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
+                <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
                         <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
                             <Home className="w-5 h-5 text-slate-600" />
                         </div>
-                        <h2 className="text-lg font-bold text-slate-800">{room.name}</h2>
+                        <h2 className="text-lg font-bold text-slate-800 truncate">{room.name}</h2>
                     </div>
 
                     {isAdmin && (
-                        <button
-                            type="button"
-                            onClick={() => onAddDevice && onAddDevice(room)}
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-gradient-to-r !text-white from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 shadow-lg" 
-                            aria-label={`Add device to ${room.name}`}
-                        >
-                            <Plus className="w-4 h-4 mr-2" />
-                            Add device to room
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => onAddDevice && onAddDevice(room)}
+                                className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-gradient-to-r !text-white from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 shadow-lg"
+                                aria-label={`Add device to ${room.name}`}
+                            >
+                                <Plus className="w-4 h-4 mr-2" />
+                                Add device to room
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={handleDelete}
+                                className="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-gradient-to-r !text-white from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 shadow-lg"
+                                aria-label={`Delete room ${room.name}`}
+                            >
+                                <Trash2 className="w-4 h-4" />
+                                Delete
+                            </button>
+                        </div>
                     )}
                 </div>
 
@@ -49,6 +68,9 @@ const RoomCard = ({ room, isAdmin, onAddDevice }) => {
                                     key={device.id}
                                     device={device}
                                     onSelect={() => { }}
+                                    onToggle={onToggle}
+                                    onSetValue={onSetValue}
+                                    pendingCommand={pendingCommandsByDeviceId?.[device.id] ?? null}
                                 />
                             ))}
                         </AnimatePresence>

@@ -6,7 +6,7 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using IO_Panel.Server.Repositories.Entities;
+using IO_Panel.Server.Models;
 using Microsoft.Extensions.Logging;
 
 namespace IO_Panel.Server.Repositories

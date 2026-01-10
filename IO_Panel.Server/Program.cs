@@ -1,11 +1,14 @@
 ﻿using System.Text;
 using IO_Panel.Server.Consumers;
+using IO_Panel.Server.Data;
 using IO_Panel.Server.Hubs;
 using IO_Panel.Server.Models;
 using IO_Panel.Server.Repositories;
+using IO_Panel.Server.Repositories.Ef;
 using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -77,6 +80,13 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
+// SQLite (file in app base directory)
+var sqliteConnectionString = builder.Configuration.GetConnectionString("AppDb")
+    ?? "Data Source=app.db";
+
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlite(sqliteConnectionString));
+
 // register typed HttpClient for external simulated devices API
 builder.Services.AddHttpClient<IDeviceApiClient, HttpDeviceApiClient>(client =>
 {
@@ -107,16 +117,10 @@ builder.Services.AddMassTransit(x =>
     });
 });
 
-builder.Services.AddSingleton<IDeviceRepository>(sp =>
-    new DeviceRepository(
-        sp.GetRequiredService<IDeviceApiClient>(),
-        sp.GetRequiredService<ILogger<DeviceRepository>>()
-    ));
-
-builder.Services.AddSingleton<IRoomRepository>(sp =>
-    new RoomRepository(sp.GetRequiredService<IDeviceRepository>()));
-builder.Services.AddSingleton<ISceneRepository, SceneRepository>();
-builder.Services.AddSingleton<IAutomationRepository, AutomationRepository>();
+builder.Services.AddScoped<IDeviceRepository, EfDeviceRepository>();
+builder.Services.AddScoped<IRoomRepository, EfRoomRepository>();
+builder.Services.AddScoped<ISceneRepository, EfSceneRepository>();
+builder.Services.AddScoped<IAutomationRepository, EfAutomationRepository>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -127,6 +131,13 @@ builder.Services.AddSingleton<IPasswordHasher<AdminUser>, PasswordHasher<AdminUs
 builder.Services.AddSignalR();
 
 var app = builder.Build();
+
+// apply migrations automatically (dev-friendly)
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.Migrate();
+}
 
 app.UseDefaultFiles();
 app.UseStaticFiles();

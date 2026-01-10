@@ -5,9 +5,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using IO_Panel.Server.Mappers;
 using IO_Panel.Server.Models;
-using IO_Panel.Server.Repositories.Entities;
 
-namespace IO_Panel.Server.Repositories;
+namespace IO_Panel.Server.Repositories.InMemory;
 
 public class DeviceRepository : IDeviceRepository
 {

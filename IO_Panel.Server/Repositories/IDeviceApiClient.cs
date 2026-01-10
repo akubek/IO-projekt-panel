@@ -1,4 +1,4 @@
-using IO_Panel.Server.Repositories.Entities;
+using IO_Panel.Server.Models;
 
 namespace IO_Panel.Server.Repositories
 {

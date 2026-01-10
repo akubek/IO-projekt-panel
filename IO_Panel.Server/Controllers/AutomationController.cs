@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using IO_Panel.Server.Models;
 using IO_Panel.Server.Repositories;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IO_Panel.Server.Controllers
@@ -35,6 +36,7 @@ namespace IO_Panel.Server.Controllers
             return Ok(automation);
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] Automation automation)
         {
@@ -46,6 +48,7 @@ namespace IO_Panel.Server.Controllers
             return CreatedAtAction(nameof(GetById), new { id = automation.Id }, automation);
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] Automation automation)
         {
@@ -64,6 +67,7 @@ namespace IO_Panel.Server.Controllers
             return NoContent();
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {

@@ -5,7 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using IO_Panel.Server.Models;
 
-namespace IO_Panel.Server.Repositories
+namespace IO_Panel.Server.Repositories.InMemory
 {
     public class AutomationRepository : IAutomationRepository
     {

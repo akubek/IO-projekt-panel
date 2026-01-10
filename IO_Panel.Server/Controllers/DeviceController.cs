@@ -2,7 +2,6 @@
 using IO_Panel.Server.Mappers;
 using IO_Panel.Server.Models;
 using IO_Panel.Server.Repositories;
-using IO_Panel.Server.Repositories.Entities;
 using MassTransit;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
