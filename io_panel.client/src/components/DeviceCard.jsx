@@ -42,8 +42,7 @@ export default function DeviceCard({ device, onSelect }) {
     const handleQuickToggle = (e) => {
         e.stopPropagation();
         if (device.type === 'switch') {
-            //place onUpdate logic here!!!
-            console.log("Handler quick toggle dziala!");
+            console.log("Handler quick toggle works");
         }
     };
 
@@ -57,13 +56,13 @@ export default function DeviceCard({ device, onSelect }) {
             transition={{ duration: 0.2 }}
             className="w-full"
         >
-            {/* Wrapper ogranicza szerokoœæ karty, wyrównuje j¹ w kolumnie i zapobiega rozci¹ganiu */}
-            <div className="max-w-sm w-full mx-auto">
+            {/* Wrapper */}
+            <div className="max-w-sm w-full">
                 <Card
                     className={clsx(
                         "group cursor-pointer border-2 transition-all duration-200 overflow-hidden",
                         "hover:shadow-xl",
-                        "h-full flex flex-col min-h-56", // spójny baseline, karta mo¿e rosn¹æ w dó³
+                        "h-full flex flex-col min-h-56",
                         config.borderColor
                     )}
                     onClick={onSelect}

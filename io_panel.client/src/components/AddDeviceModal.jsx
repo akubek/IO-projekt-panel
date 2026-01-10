@@ -7,7 +7,7 @@ export default function AddDeviceModal({ open, devices, onClose, onSelect }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
             <div className="bg-white rounded-lg shadow-lg p-6 w-11/12 max-w-3xl">
                 <div className="flex items-center mb-4">
-                    <h3 className="text-lg font-semibold">Available Uncofigured Devices</h3>
+                    <h3 className="text-lg font-semibold">Available Unconfigured Devices</h3>
                 </div>
 
                 <div className="max-h-64 overflow-auto">
@@ -37,8 +37,9 @@ export default function AddDeviceModal({ open, devices, onClose, onSelect }) {
                                             <button
                                                 type="button"
                                                 onClick={(e) => { e.stopPropagation(); onSelect && onSelect(d); }}
-                                                className="inline-flex items-center justify-center px-3 py-1 bg-blue-600 text-black rounded hover:bg-blue-700"
+                                                className="inline-flex items-center justify-center w-9 h-9 rounded-md bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow hover:from-blue-700 hover:to-cyan-700"
                                                 aria-label={`Configure ${d.name}`}
+                                                title="Add"
                                             >
                                                 +
                                             </button>

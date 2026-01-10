@@ -1,18 +1,15 @@
-﻿using System;
-using System.Threading.Tasks;
-using IO_Panel.Server.Models;
+﻿using IO_Panel.Server.Models;
 using IO_Panel.Server.Repositories;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 
 namespace IO_Panel.Server.Controllers
 {
     [ApiController]
-    [Route("[controller]")] // lub Route("api/rooms")
+    [Route("[controller]")]
     public class RoomController : ControllerBase
     {
         private readonly IRoomRepository _roomRepo;
-        // Opcjonalnie wstrzyknij RoomService, jeśli logika jest złożona
 
         public RoomController(IRoomRepository roomRepo)
         {
@@ -25,17 +22,30 @@ namespace IO_Panel.Server.Controllers
             return await _roomRepo.GetAllAsync();
         }
 
+        public sealed record CreateRoomRequest(string Name);
+
+        [Authorize(Roles = "Admin")]
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] Room room)
+        public async Task<IActionResult> Create([FromBody] CreateRoomRequest request)
         {
-            if (room == null)
+            if (request is null)
             {
                 return BadRequest();
             }
-            // 2. It calls the AddAsync method on the injected repository
+
+            if (string.IsNullOrWhiteSpace(request.Name))
+            {
+                return BadRequest("Room name is required.");
+            }
+
+            var room = new Room
+            {
+                Name = request.Name.Trim(),
+                DeviceIds = new()
+            };
+
             await _roomRepo.AddAsync(room);
-            
-            // 3. It returns a "201 Created" response, confirming success
+
             return CreatedAtAction(nameof(GetById), new { id = room.Id }, room);
         }
 
@@ -47,21 +57,24 @@ namespace IO_Panel.Server.Controllers
             return Ok(room);
         }
 
-        // Endpoint do dodawania urządzenia do pokoju (REST-owo)
-        [HttpPost("{roomId}/devices/{deviceId}")]
-        public async Task<IActionResult> AddDevice(Guid roomId, string deviceId)
+        [HttpGet("{roomId}/devices")]
+        public async Task<ActionResult<IEnumerable<Device>>> GetDevices(Guid roomId)
         {
-            // Tutaj logika: pobierz pokój, dodaj ID do listy DeviceIds, zapisz
-            // Najlepiej wywołać metodę z serwisu np. _roomService.AddDeviceToRoomAsync(roomId, deviceId)
-
             var room = await _roomRepo.GetByIdAsync(roomId);
             if (room == null) return NotFound("Room not found");
 
-            if (!room.DeviceIds.Contains(deviceId))
-            {
-                room.DeviceIds.Add(deviceId);
-                await _roomRepo.UpdateAsync(room);
-            }
+            var devices = await _roomRepo.GetDevicesInRoomAsync(roomId);
+            return Ok(devices);
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPost("{roomId}/devices/{deviceId}")]
+        public async Task<IActionResult> AddDevice(Guid roomId, string deviceId)
+        {
+            var room = await _roomRepo.GetByIdAsync(roomId);
+            if (room == null) return NotFound("Room not found");
+
+            await _roomRepo.AddDeviceToRoomAsync(roomId, deviceId);
 
             return Ok();
         }

@@ -14,6 +14,7 @@ import SceneList from './components/SceneList';
 import AutomationList from './components/AutomationList';
 import AddRoomModal from './components/AddRoomModal';
 import DeviceDetailsModal from './components/DeviceDetailsModal';
+import AddDeviceToRoomModal from './components/AddDeviceToRoomModal';
 import * as signalR from "@microsoft/signalr";
 
 function App() {
@@ -35,6 +36,9 @@ function App() {
 
     const [showConfigureModal, setShowConfigureModal] = useState(false);
     const [deviceToConfigure, setDeviceToConfigure] = useState(null);
+
+    const [showAddDeviceToRoomModal, setShowAddDeviceToRoomModal] = useState(false);
+    const [roomToAddDevice, setRoomToAddDevice] = useState(null);
 
     useEffect(() => {
         populateAllData();
@@ -63,6 +67,32 @@ function App() {
                         },
                         malfunctioning: update.malfunctioning ?? d.malfunctioning
                     };
+                })
+            );
+
+            setRooms((prevRooms) =>
+                prevRooms.map((room) => {
+                    if (!room.devices || room.devices.length === 0) {
+                        return room;
+                    }
+
+                    const updatedDevices = room.devices.map((d) => {
+                        if (d.id !== update.deviceId) {
+                            return d;
+                        }
+
+                        return {
+                            ...d,
+                            state: {
+                                ...d.state,
+                                value: update.value ?? d.state?.value ?? 0,
+                                unit: update.unit ?? d.state?.unit
+                            },
+                            malfunctioning: update.malfunctioning ?? d.malfunctioning
+                        };
+                    });
+
+                    return { ...room, devices: updatedDevices };
                 })
             );
 
@@ -153,10 +183,11 @@ function App() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authToken}`
+                    ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
                 },
                 body: JSON.stringify(newRoom),
             });
+
             if (response.ok) {
                 const createdRoom = await response.json();
                 setRooms(prevRooms => [...prevRooms, { ...createdRoom, devices: [] }]);
@@ -178,9 +209,10 @@ function App() {
             const response = await fetch(`/scene/${sceneId}/activate`, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${authToken}`
+                    ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
                 }
             });
+
             if (response.ok) {
                 console.log(`Scene ${sceneId} activated`);
             } else {
@@ -200,6 +232,33 @@ function App() {
     function handleLogout() {
         setAuthToken(null);
         setIsLoggedIn(false);
+    }
+
+    function openAddDeviceToRoom(room) {
+        setRoomToAddDevice(room);
+        setShowAddDeviceToRoomModal(true);
+    }
+
+    function closeAddDeviceToRoom() {
+        setShowAddDeviceToRoomModal(false);
+        setRoomToAddDevice(null);
+    }
+
+    function handleDeviceAddedToRoom(roomId, device) {
+        setRooms(prev =>
+            prev.map(r => {
+                if (r.id !== roomId) {
+                    return r;
+                }
+
+                const existing = r.devices ?? [];
+                if (existing.some(d => d.id === device.id)) {
+                    return r;
+                }
+
+                return { ...r, devices: [...existing, device] };
+            })
+        );
     }
 
     return (
@@ -300,7 +359,10 @@ function App() {
                         </button>
                     </div>
                     {isLoggedIn && activeTab === 'rooms' && (
-                        <Button onClick={() => setShowAddRoomModal(true)} className="!bg-blue-500 !text-white" startIcon={<Plus />}>
+                        <Button
+                            onClick={() => setShowAddRoomModal(true)}
+                            className="bg-gradient-to-r !text-white from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 shadow-lg">
+                            <Plus className="w-4 h-4 mr-2" />
                             Add Room
                         </Button>
                     )}
@@ -312,7 +374,8 @@ function App() {
                 {activeTab === 'devices' && (
                     <motion.div
                         layout
-                        className="px-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        className="px-6 grid gap-2 justify-start [grid-template-columns:repeat(auto-fit,minmax(320px,384px))] items-start"
+                    >
                         <AnimatePresence mode="popLayout">
                             {devices.map((device) => (
                                 <DeviceCard
@@ -325,7 +388,7 @@ function App() {
                 )}
 
                 {activeTab === 'rooms' && (
-                    <RoomList rooms={rooms} />
+                    <RoomList rooms={rooms} isAdmin={isLoggedIn} onAddDevice={openAddDeviceToRoom} />
                 )}
 
                 {activeTab === 'scenes' && (
@@ -361,6 +424,15 @@ function App() {
                 apiDevice={deviceToConfigure}
                 onClose={closeConfigureModal}
                 onAdd={handleAddDevice}
+            />
+
+            <AddDeviceToRoomModal
+                open={showAddDeviceToRoomModal}
+                room={roomToAddDevice}
+                devices={devices}
+                authToken={authToken}
+                onClose={closeAddDeviceToRoom}
+                onAdded={handleDeviceAddedToRoom}
             />
 
             <DeviceDetailsModal

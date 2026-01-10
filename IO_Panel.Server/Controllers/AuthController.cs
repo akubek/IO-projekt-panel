@@ -53,7 +53,7 @@ namespace IO_Panel.Server.Controllers
             var claims = new[]
             {
                 new Claim(ClaimTypes.Name, request.Username),
-                new Claim("role", "Admin")
+                new Claim(ClaimTypes.Role, "Admin")
             };
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(JwtKey));
