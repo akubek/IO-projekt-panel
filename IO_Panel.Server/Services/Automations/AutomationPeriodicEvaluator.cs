@@ -3,15 +3,29 @@ using Microsoft.Extensions.Hosting;
 
 namespace IO_Panel.Server.Services.Automations;
 
+/// <summary>
+/// Background worker that periodically evaluates enabled automations using the latest device snapshots.
+/// </summary>
+/// <remarks>
+/// This is a polling-based evaluator (interval ticking) that reuses <see cref="IAutomationRunner"/> by emulating
+/// device update events for devices referenced by automation conditions.
+/// Cooldown tracking is in-memory and resets on application restart.
+/// </remarks>
 public sealed class AutomationPeriodicEvaluator : BackgroundService
 {
+    /// <summary>
+    /// Interval between evaluation ticks.
+    /// </summary>
     private static readonly TimeSpan TickInterval = TimeSpan.FromSeconds(5);
+
+    /// <summary>
+    /// Minimum time between two evaluations/executions of the same automation (in-memory throttle).
+    /// </summary>
     private static readonly TimeSpan Cooldown = TimeSpan.FromSeconds(5);
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<AutomationPeriodicEvaluator> _logger;
 
-    // in-memory last-fired; good enough for dev; for production persist to DB
     private readonly Dictionary<Guid, DateTimeOffset> _lastFiredAt = new();
 
     public AutomationPeriodicEvaluator(IServiceScopeFactory scopeFactory, ILogger<AutomationPeriodicEvaluator> logger)
@@ -20,6 +34,9 @@ public sealed class AutomationPeriodicEvaluator : BackgroundService
         _logger = logger;
     }
 
+    /// <summary>
+    /// Main worker loop. Ticks at a fixed interval until the host shuts down.
+    /// </summary>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         using var timer = new PeriodicTimer(TickInterval);
@@ -28,7 +45,6 @@ public sealed class AutomationPeriodicEvaluator : BackgroundService
         {
             try
             {
-                _logger.LogInformation("Periodic automation evaluator tick ({IntervalSeconds}s).", TickInterval.TotalSeconds);
                 await EvaluateOnceAsync(stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
@@ -42,6 +58,9 @@ public sealed class AutomationPeriodicEvaluator : BackgroundService
         }
     }
 
+    /// <summary>
+    /// Evaluates all enabled automations once by reading the current device snapshots from the repository.
+    /// </summary>
     private async Task EvaluateOnceAsync(CancellationToken cancellationToken)
     {
         await using var scope = _scopeFactory.CreateAsyncScope();
@@ -64,15 +83,14 @@ public sealed class AutomationPeriodicEvaluator : BackgroundService
                 continue;
             }
 
-            // Evaluate conditions using latest device state(s).
-            // Current AutomationRunner only evaluates against an updated-device event,
-            // so we simulate an event per referenced device.
             var conditions = automation.Trigger?.Conditions ?? Array.Empty<Models.AutomationCondition>();
             if (conditions.Length == 0)
             {
                 continue;
             }
 
+            // Current AutomationRunner evaluates on "device updated" events.
+            // To reuse that logic with periodic polling, emulate a device update per referenced device/condition.
             foreach (var condition in conditions)
             {
                 var device = await deviceRepository.GetByIdAsync(condition.DeviceId);
@@ -81,7 +99,6 @@ public sealed class AutomationPeriodicEvaluator : BackgroundService
                     continue;
                 }
 
-                // Use latest known state from the device entity (or history if you store it separately)
                 var value = device.State?.Value;
                 var unit = device.State?.Unit;
 
@@ -90,7 +107,6 @@ public sealed class AutomationPeriodicEvaluator : BackgroundService
                     continue;
                 }
 
-                // Let the runner apply the same evaluation/execute path by emulating a device update.
                 await runner.HandleDeviceUpdatedAsync(new IO_projekt_symulator.Server.Contracts.DeviceUpdatedEvent
                 {
                     DeviceId = Guid.Parse(device.Id),
@@ -102,6 +118,9 @@ public sealed class AutomationPeriodicEvaluator : BackgroundService
         }
     }
 
+    /// <summary>
+    /// Returns <see langword="true"/> if the automation can execute now; enforces an in-memory cooldown otherwise.
+    /// </summary>
     private bool TryEnterCooldown(Guid automationId)
     {
         var now = DateTimeOffset.UtcNow;

@@ -3,6 +3,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace IO_Panel.Server.Data;
 
+/// <summary>
+/// EF Core database context for the panel application.
+/// Stores configured devices, rooms, scenes, automations, time configuration, and device state history.
+/// </summary>
 public class AppDbContext : DbContext
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
@@ -13,12 +17,9 @@ public class AppDbContext : DbContext
     public DbSet<DeviceStateHistoryEntity> DeviceStateHistory => Set<DeviceStateHistoryEntity>();
     public DbSet<RoomEntity> Rooms => Set<RoomEntity>();
     public DbSet<RoomDeviceEntity> RoomDevices => Set<RoomDeviceEntity>();
-
     public DbSet<SceneEntity> Scenes => Set<SceneEntity>();
     public DbSet<SceneActionEntity> SceneActions => Set<SceneActionEntity>();
-
     public DbSet<AutomationEntity> Automations => Set<AutomationEntity>();
-
     public DbSet<TimeConfigurationEntity> TimeConfigurations => Set<TimeConfigurationEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

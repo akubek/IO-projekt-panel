@@ -5,6 +5,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace IO_Panel.Server.Repositories.Ef;
 
+/// <summary>
+/// EF Core-backed scene repository.
+/// Scenes are stored as a parent row with a child collection of action rows.
+/// </summary>
 public sealed class EfSceneRepository : ISceneRepository
 {
     private readonly AppDbContext _db;
@@ -14,6 +18,9 @@ public sealed class EfSceneRepository : ISceneRepository
         _db = db;
     }
 
+    /// <summary>
+    /// Returns all scenes including their ordered action lists.
+    /// </summary>
     public async Task<IEnumerable<Scene>> GetAllAsync()
     {
         return await _db.Scenes
@@ -41,6 +48,9 @@ public sealed class EfSceneRepository : ISceneRepository
             .ToListAsync();
     }
 
+    /// <summary>
+    /// Returns a scene by id including its ordered action list.
+    /// </summary>
     public async Task<Scene?> GetByIdAsync(Guid id)
     {
         return await _db.Scenes
@@ -68,6 +78,9 @@ public sealed class EfSceneRepository : ISceneRepository
             .SingleOrDefaultAsync();
     }
 
+    /// <summary>
+    /// Creates a new scene record and its action rows. Generates ids when not provided.
+    /// </summary>
     public async Task AddAsync(Scene scene)
     {
         if (scene.Id == Guid.Empty)
@@ -93,6 +106,9 @@ public sealed class EfSceneRepository : ISceneRepository
         await _db.SaveChangesAsync();
     }
 
+    /// <summary>
+    /// Updates a scene by replacing its action list (delete + insert) and updating header fields.
+    /// </summary>
     public async Task UpdateAsync(Scene scene)
     {
         var entity = await _db.Scenes
@@ -121,6 +137,9 @@ public sealed class EfSceneRepository : ISceneRepository
         await _db.SaveChangesAsync();
     }
 
+    /// <summary>
+    /// Deletes a scene (cascades to its action rows).
+    /// </summary>
     public async Task DeleteAsync(Guid id)
     {
         var entity = await _db.Scenes.SingleOrDefaultAsync(s => s.Id == id);

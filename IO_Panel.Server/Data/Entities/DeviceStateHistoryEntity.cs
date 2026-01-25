@@ -2,6 +2,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace IO_Panel.Server.Data.Entities;
 
+/// <summary>
+/// Persisted device state history point (time-series) used for charts and diagnostics.
+/// </summary>
 public sealed class DeviceStateHistoryEntity
 {
     public long Id { get; set; }
@@ -9,11 +12,17 @@ public sealed class DeviceStateHistoryEntity
     public string DeviceId { get; set; } = default!;
     public DeviceEntity Device { get; set; } = default!;
 
+    /// <summary>
+    /// Timestamp in UTC when the value was recorded.
+    /// </summary>
     public DateTime RecordedAtUtc { get; set; } = DateTime.UtcNow;
 
     public double Value { get; set; }
     public string? Unit { get; set; }
 
+    /// <summary>
+    /// Defines indexes/relationships for efficient time-range queries per device.
+    /// </summary>
     public static void Configure(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<DeviceStateHistoryEntity>()

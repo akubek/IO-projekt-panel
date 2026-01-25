@@ -6,6 +6,9 @@ using MassTransit;
 
 namespace IO_Panel.Server.Services.Automations;
 
+/// <summary>
+/// Evaluates enabled automations when a device update event is received and executes the matching action.
+/// </summary>
 public sealed class AutomationRunner : IAutomationRunner
 {
     private readonly ILogger<AutomationRunner> _logger;
@@ -28,6 +31,10 @@ public sealed class AutomationRunner : IAutomationRunner
         _timeService = timeService;
     }
 
+    /// <summary>
+    /// Loads all enabled automations and evaluates those that reference the updated device.
+    /// If conditions match and the time window is satisfied, executes the configured action.
+    /// </summary>
     public async Task HandleDeviceUpdatedAsync(DeviceUpdatedEvent message, CancellationToken cancellationToken)
     {
         var all = await _automationRepository.GetAllAsync();
@@ -68,10 +75,16 @@ public sealed class AutomationRunner : IAutomationRunner
         }
     }
 
+    /// <summary>
+    /// Returns true if the automation trigger references the updated device id.
+    /// </summary>
     private static bool ReferencesDevice(AutomationTrigger trigger, string deviceId)
         => (trigger.Conditions ?? Array.Empty<AutomationCondition>())
             .Any(c => string.Equals(c.DeviceId, deviceId, StringComparison.OrdinalIgnoreCase));
 
+    /// <summary>
+    /// Evaluates the optional local time-of-day window. Supports windows that wrap across midnight.
+    /// </summary>
     private static bool IsTimeWindowSatisfied(TimeOfDayWindow? window, TimeSpan nowLocalTimeOfDay)
     {
         if (window is null)
@@ -94,6 +107,10 @@ public sealed class AutomationRunner : IAutomationRunner
         return now >= from || now <= to;
     }
 
+    /// <summary>
+    /// Determines the numeric value to use for comparisons.
+    /// If the update omits a value, boolean triggers are treated as "On" (1) when unit indicates bool.
+    /// </summary>
     private static bool TryGetComparableValue(
         AutomationCondition[]? conditions,
         string updatedDeviceId,
@@ -109,8 +126,6 @@ public sealed class AutomationRunner : IAutomationRunner
             return true;
         }
 
-        // If the incoming event doesn't include a value, allow boolean triggers to still work.
-        // We infer "On" as 1 if either the event unit or the condition unit is "bool".
         var cond = (conditions ?? Array.Empty<AutomationCondition>())
             .FirstOrDefault(c => string.Equals(c.DeviceId, updatedDeviceId, StringComparison.OrdinalIgnoreCase));
 
@@ -128,6 +143,10 @@ public sealed class AutomationRunner : IAutomationRunner
     private static bool IsBoolUnit(string? unit)
         => string.Equals(unit?.Trim(), "bool", StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// Evaluates all conditions against the updated device and comparable value.
+    /// Current implementation expects all conditions to reference the same updated device.
+    /// </summary>
     private static bool AreConditionsSatisfied(
         AutomationCondition[]? conditions,
         string updatedDeviceId,
@@ -161,6 +180,10 @@ public sealed class AutomationRunner : IAutomationRunner
         return true;
     }
 
+    /// <summary>
+    /// Determines whether a condition unit is compatible with the update unit.
+    /// Allows bool triggers even when the update misses a unit.
+    /// </summary>
     private static bool IsUnitCompatible(string? expected, string? actual)
     {
         if (string.IsNullOrWhiteSpace(expected))
@@ -168,7 +191,6 @@ public sealed class AutomationRunner : IAutomationRunner
             return true;
         }
 
-        // Allow "bool" triggers even if the event forgets to send the unit.
         if (string.Equals(expected.Trim(), "bool", StringComparison.OrdinalIgnoreCase) &&
             string.IsNullOrWhiteSpace(actual))
         {
@@ -178,6 +200,9 @@ public sealed class AutomationRunner : IAutomationRunner
         return string.Equals(expected, actual, StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>
+    /// Applies the comparison operator with a small epsilon for equality checks.
+    /// </summary>
     private static bool Compare(double left, AutomationComparisonOperator op, double right)
     {
         const double eps = 1e-9;
@@ -193,6 +218,9 @@ public sealed class AutomationRunner : IAutomationRunner
         };
     }
 
+    /// <summary>
+    /// Executes the automation action by publishing device commands or running a scene.
+    /// </summary>
     private async Task ExecuteAsync(Automation automation, CancellationToken cancellationToken)
     {
         switch (automation.Action.Kind)
@@ -215,8 +243,12 @@ public sealed class AutomationRunner : IAutomationRunner
                 };
 
                 await _publishEndpoint.Publish(command, cancellationToken);
-                _logger.LogInformation("Automation {AutomationId} executed: SetDeviceState {DeviceId}={Value}{Unit}.",
-                    automation.Id, automation.Action.DeviceId, command.Value, command.Unit);
+                _logger.LogInformation(
+                    "Automation {AutomationId} executed: SetDeviceState {DeviceId}={Value}{Unit}.",
+                    automation.Id,
+                    automation.Action.DeviceId,
+                    command.Value,
+                    command.Unit);
 
                 break;
             }
@@ -232,8 +264,10 @@ public sealed class AutomationRunner : IAutomationRunner
                 var scene = await _sceneRepository.GetByIdAsync(automation.Action.SceneId.Value);
                 if (scene is null)
                 {
-                    _logger.LogWarning("Automation {AutomationId} references missing SceneId={SceneId}.",
-                        automation.Id, automation.Action.SceneId.Value);
+                    _logger.LogWarning(
+                        "Automation {AutomationId} references missing SceneId={SceneId}.",
+                        automation.Id,
+                        automation.Action.SceneId.Value);
                     return;
                 }
 

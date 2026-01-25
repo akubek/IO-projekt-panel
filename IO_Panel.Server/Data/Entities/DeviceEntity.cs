@@ -3,8 +3,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace IO_Panel.Server.Data.Entities;
 
+/// <summary>
+/// Persisted representation of a configured device.
+/// Combines external simulator fields (type/location/state/config) with panel-specific metadata (display name, status).
+/// </summary>
 public sealed class DeviceEntity
 {
+    /// <summary>
+    /// Device identifier (string; expected to be a GUID string in this solution).
+    /// </summary>
     public string Id { get; set; } = default!;
 
     public string DeviceName { get; set; } = string.Empty;
@@ -21,12 +28,24 @@ public sealed class DeviceEntity
     public DateTimeOffset? CreatedAt { get; set; }
     public bool Malfunctioning { get; set; }
 
-    // Persist nested objects as JSON blobs (simple for SQLite)
+    /// <summary>
+    /// JSON blob containing the current device state (stored as JSON to keep SQLite schema simple).
+    /// </summary>
     public string StateJson { get; set; } = "{}";
+
+    /// <summary>
+    /// JSON blob containing the device configuration (stored as JSON to keep SQLite schema simple).
+    /// </summary>
     public string ConfigJson { get; set; } = "{}";
 
+    /// <summary>
+    /// Join entities linking this device to rooms.
+    /// </summary>
     public List<RoomDeviceEntity> RoomDevices { get; set; } = new();
 
+    /// <summary>
+    /// Model configuration for defaults / constraints.
+    /// </summary>
     public static void Configure(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<DeviceEntity>()

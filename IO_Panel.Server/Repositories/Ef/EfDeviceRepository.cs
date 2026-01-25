@@ -7,12 +7,16 @@ using System.Threading;
 using System.Threading.Tasks;
 using IO_Panel.Server.Data;
 using IO_Panel.Server.Data.Entities;
-using IO_Panel.Server.Mappers;
 using IO_Panel.Server.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace IO_Panel.Server.Repositories.Ef;
 
+/// <summary>
+/// EF Core-backed device repository.
+/// Persists configured devices locally (SQLite) and optionally enriches them with live state from the external simulator API.
+/// Also stores and queries device state history points.
+/// </summary>
 public sealed class EfDeviceRepository : IDeviceRepository
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
@@ -26,9 +30,12 @@ public sealed class EfDeviceRepository : IDeviceRepository
         _deviceApiClient = deviceApiClient;
     }
 
+    /// <summary>
+    /// Returns devices configured in the panel DB and enriches them with live data from the simulator when available.
+    /// If the simulator is unreachable, devices are returned as Offline.
+    /// </summary>
     public async Task<IEnumerable<Device>> GetConfiguredDevicesAsync(CancellationToken cancellationToken = default)
     {
-        // Load persisted configured devices
         var entities = await _db.Devices
             .AsNoTracking()
             .OrderBy(d => d.DisplayName)
@@ -38,13 +45,11 @@ public sealed class EfDeviceRepository : IDeviceRepository
 
         try
         {
-            // Fetch external devices once for enrichment
             apiDevices = (await _deviceApiClient.GetAllAsync(cancellationToken))
                 .ToDictionary(d => d.Id);
         }
         catch (HttpRequestException)
         {
-            // External API is down: treat as "no devices online"
             apiDevices = new Dictionary<string, ApiDevice>(StringComparer.OrdinalIgnoreCase);
         }
 
@@ -78,6 +83,9 @@ public sealed class EfDeviceRepository : IDeviceRepository
         return result;
     }
 
+    /// <summary>
+    /// Returns devices from the external simulator that are not yet configured in the panel DB.
+    /// </summary>
     public async Task<IEnumerable<ApiDevice>> GetUnconfiguredDevicesAsync(CancellationToken cancellationToken = default)
     {
         var apiDevices = await _deviceApiClient.GetAllAsync(cancellationToken);
@@ -87,6 +95,9 @@ public sealed class EfDeviceRepository : IDeviceRepository
         return apiDevices.Where(d => !configuredSet.Contains(d.Id));
     }
 
+    /// <summary>
+    /// Returns a single configured device from the DB and enriches it with a live simulator lookup when possible.
+    /// </summary>
     public async Task<Device?> GetByIdAsync(string id, CancellationToken cancellationToken = default)
     {
         var entity = await _db.Devices
@@ -131,12 +142,13 @@ public sealed class EfDeviceRepository : IDeviceRepository
         return domain;
     }
 
+    /// <summary>
+    /// Adds a new configured device (or updates an existing record with the same id).
+    /// </summary>
     public async Task<Device> AddAsync(Device device, CancellationToken cancellationToken = default)
     {
-        // Id is external API id, so do not generate it.
         var entity = ToEntity(device);
 
-        // Upsert style: if exists, update; otherwise insert.
         var existing = await _db.Devices.SingleOrDefaultAsync(d => d.Id == device.Id, cancellationToken);
         if (existing is null)
         {
@@ -151,6 +163,9 @@ public sealed class EfDeviceRepository : IDeviceRepository
         return device;
     }
 
+    /// <summary>
+    /// Updates a configured device record in the DB (metadata + serialized state/config snapshots).
+    /// </summary>
     public async Task UpdateAsync(Device device, CancellationToken cancellationToken = default)
     {
         var entity = await _db.Devices.SingleOrDefaultAsync(d => d.Id == device.Id, cancellationToken);
@@ -178,6 +193,9 @@ public sealed class EfDeviceRepository : IDeviceRepository
         await _db.SaveChangesAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Deletes a configured device record (cascades to room links and history via FK delete rules).
+    /// </summary>
     public async Task DeleteAsync(string id, CancellationToken cancellationToken = default)
     {
         var entity = await _db.Devices.SingleOrDefaultAsync(d => d.Id == id, cancellationToken);
@@ -190,6 +208,9 @@ public sealed class EfDeviceRepository : IDeviceRepository
         await _db.SaveChangesAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Queries device history points in a time range (ascending time order) with a maximum row limit.
+    /// </summary>
     public async Task<IReadOnlyList<DeviceStateHistoryPoint>> GetDeviceHistoryAsync(
         string deviceId,
         DateTimeOffset from,
@@ -217,6 +238,9 @@ public sealed class EfDeviceRepository : IDeviceRepository
         return rows;
     }
 
+    /// <summary>
+    /// Adds a device history point with simple de-duplication (same value/unit within a short time window).
+    /// </summary>
     public async Task AddDeviceHistoryPointAsync(
         string deviceId,
         double value,
@@ -267,6 +291,9 @@ public sealed class EfDeviceRepository : IDeviceRepository
         await _db.SaveChangesAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Maps EF entity to domain model and deserializes state/config JSON blobs safely.
+    /// </summary>
     private static Device ToDomain(DeviceEntity entity)
     {
         var state = SafeDeserialize(entity.StateJson, new DeviceState());
@@ -294,6 +321,9 @@ public sealed class EfDeviceRepository : IDeviceRepository
         };
     }
 
+    /// <summary>
+    /// Maps domain model to EF entity and serializes state/config into JSON blobs.
+    /// </summary>
     private static DeviceEntity ToEntity(Device device)
     {
         return new DeviceEntity
@@ -319,6 +349,9 @@ public sealed class EfDeviceRepository : IDeviceRepository
         };
     }
 
+    /// <summary>
+    /// Copies mapped entity values into an existing tracked entity (used for upsert-style add).
+    /// </summary>
     private static void Copy(DeviceEntity source, DeviceEntity target)
     {
         target.DeviceName = source.DeviceName;
@@ -339,6 +372,9 @@ public sealed class EfDeviceRepository : IDeviceRepository
         target.ConfigJson = source.ConfigJson;
     }
 
+    /// <summary>
+    /// Defensive JSON deserialization (returns a fallback value on invalid/missing JSON).
+    /// </summary>
     private static T SafeDeserialize<T>(string json, T fallback)
     {
         if (string.IsNullOrWhiteSpace(json))
