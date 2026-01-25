@@ -16,6 +16,7 @@ import CreateSceneModal from './components/CreateSceneModal';
 import CreateAutomationModal from './components/CreateAutomationModal';
 import * as signalR from "@microsoft/signalr";
 import DeviceList from './components/DeviceList';
+import TimeConfigModal from './components/TimeConfigModal';
 
 function App() {
     const [devices, setDevices] = useState([]);
@@ -47,6 +48,9 @@ function App() {
     const [pendingCommandsByDeviceId, setPendingCommandsByDeviceId] = useState({});
     const [deviceUpdateTicksById, setDeviceUpdateTicksById] = useState({});
 
+    const [timeSnapshot, setTimeSnapshot] = useState(null);
+    const [showTimeConfig, setShowTimeConfig] = useState(false);
+
     const roomNamesByDeviceId = useMemo(() => {
         const map = {};
 
@@ -62,7 +66,27 @@ function App() {
 
     useEffect(() => {
         populateAllData();
+        void refreshTime();
     }, []);
+
+    useEffect(() => {
+        const id = window.setInterval(() => {
+            void refreshTime();
+        }, 1000);
+
+        return () => window.clearInterval(id);
+    }, []);
+
+    async function refreshTime() {
+        try {
+            const res = await fetch("/time");
+            if (!res.ok) return;
+
+            const data = await res.json();
+            setTimeSnapshot(data);
+        } catch { //
+        }
+    }
 
     useEffect(() => {
         const connection = new signalR.HubConnectionBuilder()
@@ -529,6 +553,14 @@ function App() {
         void sendDeviceState(device.id, { value, unit });
     }
 
+    const nowLocalText = (() => {
+        if (!timeSnapshot?.nowLocal) return "--:--:-- • ----/--/--";
+        const d = new Date(timeSnapshot.nowLocal);
+        const time = d.toLocaleTimeString(undefined, { hour12: false });
+        const date = d.toLocaleDateString();
+        return `${time} • ${date}`;
+    })();
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
             {/* Header */}
@@ -544,7 +576,12 @@ function App() {
                                 <p className="text-sm text-slate-500">Simulate and control virtual devices</p>
                             </div>
                         </div>
+
                         <div className="flex items-center gap-3">
+                            <div className="hidden sm:block text-sm font-semibold text-slate-700 drop-shadow-sm">
+                                {nowLocalText}
+                            </div>
+
                             <div className="hidden sm:flex items-center gap-2">
                                 <div
                                     className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium shadow-sm border ${isLoggedIn
@@ -559,6 +596,15 @@ function App() {
                                     </span>
                                 </div>
                             </div>
+
+                            {isLoggedIn && (
+                                <Button
+                                    onClick={() => setShowTimeConfig(true)}
+                                    className="bg-gradient-to-r !text-white from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 shadow-lg"
+                                >
+                                    Time & Date
+                                </Button>
+                            )}
 
                             {!isLoggedIn ? (
                                 <Button disabled className="bg-gradient-to-r !text-white from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 shadow-lg">
@@ -758,6 +804,16 @@ function App() {
                 authToken={authToken}
                 onClose={() => setShowCreateAutomationModal(false)}
                 onCreated={handleAutomationCreated}
+            />
+
+            <TimeConfigModal
+                open={showTimeConfig}
+                authToken={authToken}
+                onClose={() => setShowTimeConfig(false)}
+                onSaved={(saved) => {
+                    setTimeSnapshot(saved);
+                    void refreshTime();
+                }}
             />
         </div>
     );

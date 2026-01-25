@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using IO_Panel.Server.Services.Time;
+using System.Text;
 using IO_Panel.Server.Consumers;
 using IO_Panel.Server.Data;
 using IO_Panel.Server.Hubs;
@@ -125,6 +126,7 @@ builder.Services.AddScoped<IRoomRepository, EfRoomRepository>();
 builder.Services.AddScoped<ISceneRepository, EfSceneRepository>();
 builder.Services.AddScoped<IAutomationRepository, EfAutomationRepository>();
 builder.Services.AddScoped<IAutomationRunner, AutomationRunner>();
+builder.Services.AddScoped<ITimeService, TimeService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();

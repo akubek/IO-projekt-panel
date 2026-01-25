@@ -19,6 +19,8 @@ public class AppDbContext : DbContext
 
     public DbSet<AutomationEntity> Automations => Set<AutomationEntity>();
 
+    public DbSet<TimeConfigurationEntity> TimeConfigurations => Set<TimeConfigurationEntity>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -60,5 +62,12 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<AutomationEntity>()
             .HasKey(a => a.Id);
+
+        modelBuilder.Entity<TimeConfigurationEntity>()
+            .HasKey(x => x.Id);
+
+        modelBuilder.Entity<TimeConfigurationEntity>()
+            .HasIndex(x => x.Id)
+            .IsUnique();
     }
 }

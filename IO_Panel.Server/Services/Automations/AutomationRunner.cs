@@ -1,6 +1,7 @@
 using IO_projekt_symulator.Server.Contracts;
 using IO_Panel.Server.Models;
 using IO_Panel.Server.Repositories;
+using IO_Panel.Server.Services.Time;
 using MassTransit;
 
 namespace IO_Panel.Server.Services.Automations;
@@ -11,17 +12,20 @@ public sealed class AutomationRunner : IAutomationRunner
     private readonly IAutomationRepository _automationRepository;
     private readonly ISceneRepository _sceneRepository;
     private readonly IPublishEndpoint _publishEndpoint;
+    private readonly ITimeService _timeService;
 
     public AutomationRunner(
         ILogger<AutomationRunner> logger,
         IAutomationRepository automationRepository,
         ISceneRepository sceneRepository,
-        IPublishEndpoint publishEndpoint)
+        IPublishEndpoint publishEndpoint,
+        ITimeService timeService)
     {
         _logger = logger;
         _automationRepository = automationRepository;
         _sceneRepository = sceneRepository;
         _publishEndpoint = publishEndpoint;
+        _timeService = timeService;
     }
 
     public async Task HandleDeviceUpdatedAsync(DeviceUpdatedEvent message, CancellationToken cancellationToken)
@@ -29,6 +33,9 @@ public sealed class AutomationRunner : IAutomationRunner
         var all = await _automationRepository.GetAllAsync();
 
         var deviceId = message.DeviceId.ToString();
+
+        var timeSnapshot = await _timeService.GetSnapshotAsync(cancellationToken);
+        var nowLocalTimeOfDay = timeSnapshot.NowLocal.TimeOfDay;
 
         foreach (var automation in all)
         {
@@ -42,7 +49,7 @@ public sealed class AutomationRunner : IAutomationRunner
                 continue;
             }
 
-            if (!IsTimeWindowSatisfied(automation.Trigger.TimeWindow, DateTimeOffset.Now.TimeOfDay))
+            if (!IsTimeWindowSatisfied(automation.Trigger.TimeWindow, nowLocalTimeOfDay))
             {
                 continue;
             }

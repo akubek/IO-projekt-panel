@@ -81,6 +81,11 @@ export default defineConfig({
                 target: 'https://localhost:7280',
                 changeOrigin: true,
                 secure: false
+            },
+            '/time': {
+                target: 'https://localhost:7280',
+                changeOrigin: true,
+                secure: false
             }
         },
         port: parseInt(env.DEV_SERVER_PORT || '52795'),
