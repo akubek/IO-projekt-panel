@@ -4,6 +4,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace IO_Panel.Server.Controllers;
 
+/// <summary>
+/// Exposes server time snapshots and admin-only time configuration.
+/// </summary>
 [ApiController]
 [Route("time")]
 public sealed class TimeController : ControllerBase
@@ -15,6 +18,9 @@ public sealed class TimeController : ControllerBase
         _timeService = timeService;
     }
 
+    /// <summary>
+    /// Returns the current time snapshot used by the UI and automation scheduler.
+    /// </summary>
     [HttpGet]
     public async Task<ActionResult<TimeSnapshot>> Get(CancellationToken cancellationToken)
     {
@@ -22,8 +28,14 @@ public sealed class TimeController : ControllerBase
         return Ok(snapshot);
     }
 
+    /// <summary>
+    /// Request payload for time configuration.
+    /// </summary>
     public sealed record SetTimeRequest(string? TimeZoneId, string VirtualNowLocal);
 
+    /// <summary>
+    /// Admin-only. Updates the configured time (virtual clock) used by the application.
+    /// </summary>
     [Authorize(Roles = "Admin")]
     [HttpPut]
     public async Task<ActionResult<TimeSnapshot>> Set([FromBody] SetTimeRequest request, CancellationToken cancellationToken)
@@ -42,6 +54,9 @@ public sealed class TimeController : ControllerBase
         return Ok(snapshot);
     }
 
+    /// <summary>
+    /// Admin-only. Resets time configuration back to real-time behavior.
+    /// </summary>
     [Authorize(Roles = "Admin")]
     [HttpDelete]
     public async Task<ActionResult<TimeSnapshot>> Reset(CancellationToken cancellationToken)

@@ -7,6 +7,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace IO_Panel.Server.Controllers
 {
+    /// <summary>
+    /// CRUD API for automations. Execution is performed by the background automation evaluator/runner.
+    /// </summary>
     [ApiController]
     [Route("[controller]")]
     public class AutomationController : ControllerBase
@@ -18,6 +21,9 @@ namespace IO_Panel.Server.Controllers
             _automationRepository = automationRepository;
         }
 
+        /// <summary>
+        /// Returns all configured automations.
+        /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -25,6 +31,9 @@ namespace IO_Panel.Server.Controllers
             return Ok(automations);
         }
 
+        /// <summary>
+        /// Returns a single automation by id.
+        /// </summary>
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
@@ -33,9 +42,13 @@ namespace IO_Panel.Server.Controllers
             {
                 return NotFound();
             }
+
             return Ok(automation);
         }
 
+        /// <summary>
+        /// Admin-only. Creates an automation definition.
+        /// </summary>
         [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] Automation automation)
@@ -44,10 +57,14 @@ namespace IO_Panel.Server.Controllers
             {
                 return BadRequest();
             }
+
             await _automationRepository.AddAsync(automation);
             return CreatedAtAction(nameof(GetById), new { id = automation.Id }, automation);
         }
 
+        /// <summary>
+        /// Admin-only. Updates an automation definition.
+        /// </summary>
         [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] Automation automation)
@@ -67,6 +84,9 @@ namespace IO_Panel.Server.Controllers
             return NoContent();
         }
 
+        /// <summary>
+        /// Admin-only. Deletes an automation definition.
+        /// </summary>
         [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)

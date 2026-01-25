@@ -5,6 +5,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace IO_Panel.Server.Services.Time;
 
+/// <summary>
+/// Time provider supporting persisted configuration for a virtual clock (offset/fixed time).
+/// Used by the UI and the automation scheduler to stay consistent.
+/// </summary>
 public sealed class TimeService : ITimeService
 {
     private readonly AppDbContext _db;
@@ -14,6 +18,9 @@ public sealed class TimeService : ITimeService
         _db = db;
     }
 
+    /// <summary>
+    /// Returns the current virtual time snapshot. If no configuration exists, returns real-time (UTC).
+    /// </summary>
     public async Task<TimeSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default)
     {
         var cfg = await _db.TimeConfigurations
@@ -47,6 +54,9 @@ public sealed class TimeService : ITimeService
             VirtualNowAtAppliedUtc: cfg.VirtualNowAtAppliedUtc);
     }
 
+    /// <summary>
+    /// Persists a new time configuration entry and returns the resulting snapshot.
+    /// </summary>
     public async Task<TimeSnapshot> SetAsync(string timeZoneId, string virtualNowLocal, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(virtualNowLocal))
@@ -99,6 +109,9 @@ public sealed class TimeService : ITimeService
         return await GetSnapshotAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Removes any stored time configuration and returns the current snapshot (real-time behavior).
+    /// </summary>
     public async Task<TimeSnapshot> ResetAsync(CancellationToken cancellationToken = default)
     {
         _db.TimeConfigurations.RemoveRange(_db.TimeConfigurations);
@@ -107,12 +120,18 @@ public sealed class TimeService : ITimeService
         return await GetSnapshotAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Computes the virtual "now" in UTC based on the persisted baseline and elapsed real time.
+    /// </summary>
     private static DateTimeOffset ComputeVirtualNowUtc(TimeConfigurationEntity cfg, DateTimeOffset realNowUtc)
     {
         var elapsed = realNowUtc - cfg.AppliedAtUtc;
         return cfg.VirtualNowAtAppliedUtc + elapsed;
     }
 
+    /// <summary>
+    /// Attempts to resolve a time zone id; falls back to UTC if the id is unknown on the current OS.
+    /// </summary>
     private static TimeZoneInfo ResolveTimeZoneOrUtc(string timeZoneId)
     {
         try

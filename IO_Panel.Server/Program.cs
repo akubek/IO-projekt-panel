@@ -14,8 +14,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
+// Application entry point. Configures DI, auth, persistence (SQLite), messaging (RabbitMQ), and real-time updates (SignalR).
+
 var builder = WebApplication.CreateBuilder(args);
 
+// Load overrides from panel.ini (dev/prod friendly) and merge into IConfiguration.
 var iniPath = Path.Combine(AppContext.BaseDirectory, "panel.ini");
 var iniValues = IniFile.ReadKeyValues(iniPath);
 
@@ -24,6 +27,8 @@ if (iniValues.Count > 0)
     builder.Configuration.AddInMemoryCollection(iniValues);
 }
 
+
+// Allow the dev client origin (Vite) to call the API + SignalR hub with credentials.
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("ClientDev", policy =>
@@ -44,6 +49,7 @@ if (!string.IsNullOrWhiteSpace(urls) && string.IsNullOrWhiteSpace(builder.Config
     builder.WebHost.UseUrls(urls);
 }
 
+// JWT-based admin authentication (single admin user from configuration).
 var jwtKey = builder.Configuration["AdminAuth:JwtKey"]
     ?? "dev-admin-auth-key-abcdefghijklmnoprstuwvxyz0123456789";
 
@@ -90,7 +96,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
-// SQLite (file in app base directory)
+// SQLite database used for configured devices, rooms, scenes, automations, time configuration and history.
 var sqliteConnectionString = builder.Configuration.GetConnectionString("AppDb")
     ?? "Data Source=app.db";
 
@@ -109,7 +115,7 @@ builder.Services.AddHttpClient<IDeviceApiClient, HttpDeviceApiClient>(client =>
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 
-// Configure MassTransit with RabbitMQ
+// RabbitMQ integration: listen for device updates and publish device commands to the simulator.
 builder.Services.AddMassTransit(x =>
 {
     x.AddConsumer<DeviceUpdatedEventConsumer>();
@@ -157,11 +163,13 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton<IPasswordHasher<AdminUser>, PasswordHasher<AdminUser>>();
 
 builder.Services.AddSignalR();
+
+// Background automation evaluator that periodically checks triggers and executes actions.
 builder.Services.AddHostedService<IO_Panel.Server.Services.Automations.AutomationPeriodicEvaluator>();
 
 var app = builder.Build();
 
-// apply migrations automatically (dev-friendly)
+// Apply pending EF Core migrations at startup (dev-friendly; avoid in strict production setups).
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -187,6 +195,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+// Real-time push of device updates to connected UI clients.
 app.MapHub<DeviceUpdatesHub>("/hubs/device-updates")
     .RequireCors("ClientDev");
 

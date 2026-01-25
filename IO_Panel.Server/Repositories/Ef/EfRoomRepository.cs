@@ -5,6 +5,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace IO_Panel.Server.Repositories.Ef;
 
+/// <summary>
+/// EF Core-backed room repository.
+/// Manages rooms and the many-to-many relationship between rooms and configured devices.
+/// </summary>
 public sealed class EfRoomRepository : IRoomRepository
 {
     private readonly AppDbContext _db;
@@ -16,6 +20,9 @@ public sealed class EfRoomRepository : IRoomRepository
         _deviceRepository = deviceRepository;
     }
 
+    /// <summary>
+    /// Returns all rooms (without device membership; membership is queried separately).
+    /// </summary>
     public async Task<IEnumerable<Room>> GetAllAsync()
     {
         return await _db.Rooms
@@ -30,6 +37,9 @@ public sealed class EfRoomRepository : IRoomRepository
             .ToListAsync();
     }
 
+    /// <summary>
+    /// Returns a room by id (without device membership; membership is queried separately).
+    /// </summary>
     public async Task<Room?> GetByIdAsync(Guid id)
     {
         return await _db.Rooms
@@ -44,6 +54,9 @@ public sealed class EfRoomRepository : IRoomRepository
             .SingleOrDefaultAsync();
     }
 
+    /// <summary>
+    /// Creates a room record. Generates an id if none is provided.
+    /// </summary>
     public async Task AddAsync(Room room)
     {
         if (room.Id == Guid.Empty)
@@ -61,6 +74,9 @@ public sealed class EfRoomRepository : IRoomRepository
         await _db.SaveChangesAsync();
     }
 
+    /// <summary>
+    /// Updates room metadata (currently only the name).
+    /// </summary>
     public async Task UpdateAsync(Room room)
     {
         var entity = await _db.Rooms.SingleOrDefaultAsync(r => r.Id == room.Id);
@@ -73,6 +89,9 @@ public sealed class EfRoomRepository : IRoomRepository
         await _db.SaveChangesAsync();
     }
 
+    /// <summary>
+    /// Deletes a room (cascades to membership links).
+    /// </summary>
     public async Task DeleteAsync(Guid id)
     {
         var entity = await _db.Rooms.SingleOrDefaultAsync(r => r.Id == id);
@@ -85,6 +104,9 @@ public sealed class EfRoomRepository : IRoomRepository
         await _db.SaveChangesAsync();
     }
 
+    /// <summary>
+    /// Adds a device to a room by creating a join row. No-op if room/device does not exist or if link already exists.
+    /// </summary>
     public async Task AddDeviceToRoomAsync(Guid roomId, string deviceId)
     {
         var roomExists = await _db.Rooms.AsNoTracking().AnyAsync(r => r.Id == roomId);
@@ -114,6 +136,9 @@ public sealed class EfRoomRepository : IRoomRepository
         await _db.SaveChangesAsync();
     }
 
+    /// <summary>
+    /// Removes a device from a room by deleting the join row.
+    /// </summary>
     public async Task RemoveDeviceFromRoomAsync(Guid roomId, string deviceId)
     {
         var link = await _db.RoomDevices
@@ -128,6 +153,9 @@ public sealed class EfRoomRepository : IRoomRepository
         await _db.SaveChangesAsync();
     }
 
+    /// <summary>
+    /// Returns current device snapshots for a room by resolving each configured device id via <see cref="IDeviceRepository"/>.
+    /// </summary>
     public async Task<IEnumerable<Device>> GetDevicesInRoomAsync(Guid roomId)
     {
         var deviceIds = await _db.RoomDevices

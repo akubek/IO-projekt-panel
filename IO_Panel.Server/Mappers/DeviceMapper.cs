@@ -2,15 +2,21 @@ using IO_Panel.Server.Models;
 
 namespace IO_Panel.Server.Mappers
 {
+    /// <summary>
+    /// Mapping helpers between external simulator DTOs (<see cref="ApiDevice"/>) and internal domain models (<see cref="Device"/>).
+    /// </summary>
     public static class DeviceMapper
     {
-        // map API model -> domain model
+        /// <summary>
+        /// Converts an external simulator device DTO into the panel domain model, applying UI defaults.
+        /// </summary>
         public static Device ToDomain(this ApiDevice api, string? name = null, DateTime? lastSeen = null)
         {
             if (api.Id == null)
             {
                 throw new ArgumentNullException(nameof(api.Id), "API Device ID cannot be null.");
             }
+
             return new Device
             {
                 Id = api.Id,
@@ -25,7 +31,7 @@ namespace IO_Panel.Server.Mappers
                 },
                 Config = new DeviceConfig
                 {
-                    // ApiDeviceConfig exposes "Readonly" while domain uses "ReadOnly"
+                    // ApiDeviceConfig exposes "Readonly" while domain uses "ReadOnly".
                     ReadOnly = api.Config?.Readonly ?? false,
                     Min = api.Config?.Min ?? 0,
                     Max = api.Config?.Max ?? 0,
@@ -38,7 +44,9 @@ namespace IO_Panel.Server.Mappers
             };
         }
 
-        // optional: map domain -> API model (if you need to send config back)
+        /// <summary>
+        /// Converts the panel domain model into an external simulator DTO (used when calling simulator endpoints).
+        /// </summary>
         public static ApiDevice ToApi(this Device d)
         {
             return new ApiDevice
@@ -48,17 +56,31 @@ namespace IO_Panel.Server.Mappers
                 Location = d.Location,
                 Description = d.Description,
                 State = new ApiDeviceState { Value = d.State.Value, Unit = d.State.Unit },
-                Config = new ApiDeviceConfig { Readonly = d.Config.ReadOnly, Min = d.Config.Min, Max = d.Config.Max, Step = d.Config.Step },
+                Config = new ApiDeviceConfig
+                {
+                    Readonly = d.Config.ReadOnly,
+                    Min = d.Config.Min,
+                    Max = d.Config.Max,
+                    Step = d.Config.Step
+                },
                 CreatedAt = d.CreatedAt
             };
         }
 
+        /// <summary>
+        /// Updates an existing <see cref="Device"/> instance with values from <see cref="ApiDevice"/>.
+        /// </summary>
+        /// <remarks>
+        /// This method currently reassigns the local parameter (<c>d = ...</c>), which does not modify the caller's instance.
+        /// If it's intended to mutate, copy properties onto <paramref name="d"/> instead of reassigning.
+        /// </remarks>
         internal static void UpdateFromApiDevice(this Device d, ApiDevice apiDevice)
         {
             if (d.Id != apiDevice.Id)
             {
                 throw new ArgumentException("Device ID mismatch between domain and API models.");
             }
+
             d = apiDevice.ToDomain(name: d.DeviceName);
         }
     }

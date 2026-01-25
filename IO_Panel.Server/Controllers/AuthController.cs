@@ -6,10 +6,19 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace IO_Panel.Server.Controllers
 {
+    /// <summary>
+    /// Request payload for the admin login endpoint.
+    /// </summary>
     public record LoginRequest(string Username, string Password);
 
+    /// <summary>
+    /// Response payload containing the issued JWT and basic identity information.
+    /// </summary>
     public record LoginResponse(string Token, string Username, string Role);
 
+    /// <summary>
+    /// Provides a simple admin login endpoint that issues a JWT token based on configured credentials.
+    /// </summary>
     [ApiController]
     [Route("auth")]
     public class AuthController : ControllerBase
@@ -23,6 +32,9 @@ namespace IO_Panel.Server.Controllers
             _configuration = configuration;
         }
 
+        /// <summary>
+        /// Validates admin credentials from configuration and returns a signed JWT used to access admin-only endpoints.
+        /// </summary>
         [HttpPost("login")]
         public ActionResult<LoginResponse> Login([FromBody] LoginRequest request)
         {

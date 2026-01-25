@@ -2,6 +2,10 @@ using System.Text.Json.Serialization;
 
 namespace IO_Panel.Server.Models
 {
+    /// <summary>
+    /// DTO representing a device returned by the external simulator API.
+    /// Keep in sync with the simulator contract.
+    /// </summary>
     public class ApiDevice
     {
         [JsonPropertyName("id")]
@@ -32,6 +36,9 @@ namespace IO_Panel.Server.Models
         public bool Malfunctioning { get; set; }
     }
 
+    /// <summary>
+    /// Device state payload returned by the simulator API.
+    /// </summary>
     public class ApiDeviceState
     {
         [JsonPropertyName("value")]
@@ -41,6 +48,9 @@ namespace IO_Panel.Server.Models
         public string? Unit { get; set; }
     }
 
+    /// <summary>
+    /// Device configuration payload returned by the simulator API.
+    /// </summary>
     public class ApiDeviceConfig
     {
         [JsonPropertyName("min")]

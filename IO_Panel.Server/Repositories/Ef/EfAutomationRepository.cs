@@ -6,6 +6,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace IO_Panel.Server.Repositories.Ef;
 
+/// <summary>
+/// EF Core-backed automation repository.
+/// Automations store trigger/action definitions as JSON for schema flexibility.
+/// </summary>
 public sealed class EfAutomationRepository : IAutomationRepository
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
@@ -17,6 +21,9 @@ public sealed class EfAutomationRepository : IAutomationRepository
         _db = db;
     }
 
+    /// <summary>
+    /// Returns all automations (deserializing trigger/action JSON into domain models).
+    /// </summary>
     public async Task<IEnumerable<Automation>> GetAllAsync()
     {
         return await _db.Automations
@@ -33,6 +40,9 @@ public sealed class EfAutomationRepository : IAutomationRepository
             .ToListAsync();
     }
 
+    /// <summary>
+    /// Returns an automation by id (deserializing trigger/action JSON into domain models).
+    /// </summary>
     public async Task<Automation?> GetByIdAsync(Guid id)
     {
         return await _db.Automations
@@ -49,6 +59,9 @@ public sealed class EfAutomationRepository : IAutomationRepository
             .SingleOrDefaultAsync();
     }
 
+    /// <summary>
+    /// Creates an automation record. Generates an id when not provided.
+    /// </summary>
     public async Task AddAsync(Automation automation)
     {
         if (automation.Id == Guid.Empty)
@@ -69,6 +82,9 @@ public sealed class EfAutomationRepository : IAutomationRepository
         await _db.SaveChangesAsync();
     }
 
+    /// <summary>
+    /// Updates an automation record (including serialized trigger/action JSON).
+    /// </summary>
     public async Task UpdateAsync(Automation automation)
     {
         var entity = await _db.Automations.SingleOrDefaultAsync(a => a.Id == automation.Id);
@@ -85,6 +101,9 @@ public sealed class EfAutomationRepository : IAutomationRepository
         await _db.SaveChangesAsync();
     }
 
+    /// <summary>
+    /// Deletes an automation record.
+    /// </summary>
     public async Task DeleteAsync(Guid id)
     {
         var entity = await _db.Automations.SingleOrDefaultAsync(a => a.Id == id);
@@ -97,6 +116,9 @@ public sealed class EfAutomationRepository : IAutomationRepository
         await _db.SaveChangesAsync();
     }
 
+    /// <summary>
+    /// Defensive JSON deserialization (returns a fallback value on invalid/missing JSON).
+    /// </summary>
     private static T SafeDeserialize<T>(string json, T fallback)
     {
         if (string.IsNullOrWhiteSpace(json))

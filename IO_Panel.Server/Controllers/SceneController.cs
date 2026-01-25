@@ -11,6 +11,9 @@ using IO_projekt_symulator.Server.Contracts;
 
 namespace IO_Panel.Server.Controllers
 {
+    /// <summary>
+    /// CRUD API for scenes. Activating a scene publishes a batch of device state commands to RabbitMQ.
+    /// </summary>
     [ApiController]
     [Route("[controller]")]
     public class SceneController : ControllerBase
@@ -20,7 +23,11 @@ namespace IO_Panel.Server.Controllers
         private readonly ILogger<SceneController> _logger;
         private readonly IPublishEndpoint _publishEndpoint;
 
-        public SceneController(ISceneRepository sceneRepository, IDeviceRepository deviceRepository, ILogger<SceneController> logger, IPublishEndpoint publishEndpoint)
+        public SceneController(
+            ISceneRepository sceneRepository,
+            IDeviceRepository deviceRepository,
+            ILogger<SceneController> logger,
+            IPublishEndpoint publishEndpoint)
         {
             _sceneRepository = sceneRepository;
             _deviceRepository = deviceRepository;
@@ -28,9 +35,19 @@ namespace IO_Panel.Server.Controllers
             _publishEndpoint = publishEndpoint;
         }
 
+        /// <summary>
+        /// Request payload for scene creation.
+        /// </summary>
         public sealed record CreateSceneRequest(string Name, bool IsPublic, SceneActionDto[] Actions);
+
+        /// <summary>
+        /// Request payload describing a single scene action.
+        /// </summary>
         public sealed record SceneActionDto(string DeviceId, DeviceState TargetState);
 
+        /// <summary>
+        /// Returns all scenes.
+        /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -38,6 +55,9 @@ namespace IO_Panel.Server.Controllers
             return Ok(scenes);
         }
 
+        /// <summary>
+        /// Returns a scene by id.
+        /// </summary>
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
@@ -46,9 +66,13 @@ namespace IO_Panel.Server.Controllers
             {
                 return NotFound();
             }
+
             return Ok(scene);
         }
 
+        /// <summary>
+        /// Admin-only. Creates a scene definition.
+        /// </summary>
         [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateSceneRequest request)
@@ -78,6 +102,9 @@ namespace IO_Panel.Server.Controllers
             return CreatedAtAction(nameof(GetById), new { id = scene.Id }, scene);
         }
 
+        /// <summary>
+        /// Admin-only. Updates a scene definition.
+        /// </summary>
         [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] Scene scene)
@@ -97,6 +124,9 @@ namespace IO_Panel.Server.Controllers
             return NoContent();
         }
 
+        /// <summary>
+        /// Admin-only. Deletes a scene definition.
+        /// </summary>
         [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
@@ -111,6 +141,10 @@ namespace IO_Panel.Server.Controllers
             return NoContent();
         }
 
+        /// <summary>
+        /// Activates a scene by publishing a SetDeviceStateCommand for each configured scene action.
+        /// Public scenes can be activated without authentication; private scenes require authentication.
+        /// </summary>
         [HttpPost("{id}/activate")]
         public async Task<IActionResult> ActivateScene(Guid id)
         {

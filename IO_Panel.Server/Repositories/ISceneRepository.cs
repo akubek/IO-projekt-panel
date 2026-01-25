@@ -5,6 +5,9 @@ using IO_Panel.Server.Models;
 
 namespace IO_Panel.Server.Repositories
 {
+    /// <summary>
+    /// Abstraction for scene persistence and retrieval.
+    /// </summary>
     public interface ISceneRepository
     {
         Task<IEnumerable<Scene>> GetAllAsync();
