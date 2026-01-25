@@ -28,6 +28,24 @@ export default function CreateSceneModal({ open, devices, authToken, onClose, on
     // Hard-block: non-admins cannot create scenes.
     if (!open || !isAdmin) return null;
 
+    const checkboxInputClassName = "peer sr-only";
+    const checkboxBoxClassName =
+        "inline-flex h-5 w-5 items-center justify-center rounded border border-slate-500 bg-white shadow-sm " +
+        "peer-checked:bg-blue-600 peer-checked:border-blue-600 " +
+        "peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 " +
+        "peer-disabled:opacity-50 peer-disabled:cursor-not-allowed";
+
+    const checkboxMarkClassName =
+        "h-2.5 w-1.5 -mt-0.5 rotate-45 " +
+        "border-b-2 border-r-2 border-white rounded-[1px] " +
+        "opacity-0 peer-checked:opacity-100";
+
+    const inputClassName =
+        "mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none " +
+        "focus:border-blue-300 focus:ring-4 focus:ring-blue-100 disabled:opacity-60";
+
+    const selectClassName = inputClassName;
+
     function addAction() {
         const id = selectedDeviceId;
         if (!id) return;
@@ -118,12 +136,16 @@ export default function CreateSceneModal({ open, devices, authToken, onClose, on
     }
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div className="bg-white rounded-lg shadow-lg p-6 w-11/12 max-w-3xl">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold">Create Scene</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm px-4">
+            <div className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
+                    <div>
+                        <h3 className="text-lg font-semibold text-slate-900">Create Scene</h3>
+                        <div className="mt-0.5 text-sm text-slate-500">Build a reusable set of device states.</div>
+                    </div>
+
                     <button
-                        className="px-4 py-2 rounded bg-slate-100 text-slate-800 hover:bg-slate-200 disabled:opacity-50"
+                        className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
                         onClick={onClose}
                         disabled={isBusy}
                     >
@@ -131,32 +153,39 @@ export default function CreateSceneModal({ open, devices, authToken, onClose, on
                     </button>
                 </div>
 
-                <div className="space-y-4">
-                    <label className="block text-sm">
-                        Scene name
-                        <input
-                            className="mt-1 w-full border rounded px-2 py-2"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            disabled={isBusy}
-                        />
-                    </label>
+                <div className="px-6 py-5 space-y-5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+                        <label className="block text-sm font-semibold text-slate-700">
+                            Scene name
+                            <input
+                                className={inputClassName}
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                disabled={isBusy}
+                            />
+                        </label>
 
-                    <label className="inline-flex items-center gap-2 text-sm">
-                        <input
-                            type="checkbox"
-                            checked={isPublic}
-                            onChange={(e) => setIsPublic(e.target.checked)}
-                            disabled={isBusy}
-                        />
-                        Public (uncheck for private)
-                    </label>
+                        <label className="inline-flex items-center gap-2 text-sm mt-6 sm:mt-0 select-none cursor-pointer">
+                            <input
+                                type="checkbox"
+                                className={checkboxInputClassName}
+                                checked={isPublic}
+                                onChange={(e) => setIsPublic(e.target.checked)}
+                                disabled={isBusy}
+                            />
+                            <span className={checkboxBoxClassName} aria-hidden="true">
+                                <span className={checkboxMarkClassName} />
+                            </span>
+                            <span className="font-semibold text-slate-800">Public</span>
+                            <span className="text-slate-500 font-normal">(uncheck for private)</span>
+                        </label>
+                    </div>
 
-                    <div className="flex flex-col sm:flex-row gap-2 items-end">
-                        <label className="block text-sm flex-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end">
+                        <label className="block text-sm font-semibold text-slate-700">
                             Add device
                             <select
-                                className="mt-1 w-full border rounded px-2 py-2"
+                                className={selectClassName}
                                 value={selectedDeviceId}
                                 onChange={(e) => setSelectedDeviceId(e.target.value)}
                                 disabled={isBusy}
@@ -174,14 +203,14 @@ export default function CreateSceneModal({ open, devices, authToken, onClose, on
                             type="button"
                             onClick={addAction}
                             disabled={isBusy || !selectedDeviceId}
-                            className="inline-flex items-center justify-center px-4 py-2 rounded-md bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow hover:from-blue-700 hover:to-cyan-700 disabled:opacity-50"
+                            className="rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg hover:from-blue-700 hover:to-cyan-700 disabled:opacity-60"
                         >
-                            +
+                            Add
                         </button>
                     </div>
 
-                    <div className="border rounded-md">
-                        <div className="px-4 py-2 border-b bg-slate-50 font-semibold text-sm">
+                    <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+                        <div className="border-b border-slate-100 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-900">
                             Actions ({Object.keys(actions).length})
                         </div>
 
@@ -194,20 +223,25 @@ export default function CreateSceneModal({ open, devices, authToken, onClose, on
                                     if (!device) return null;
 
                                     return (
-                                        <div key={a.deviceId} className="flex flex-col md:flex-row md:items-center gap-3 border rounded p-3">
-                                            <div className="flex-1">
-                                                <div className="font-semibold text-slate-800">{device.displayName}</div>
-                                                <div className="text-xs text-slate-500">{device.type} , {device.localization ?? device.location ?? ""}</div>
+                                        <div
+                                            key={a.deviceId}
+                                            className="flex flex-col md:flex-row md:items-center gap-3 rounded-xl border border-slate-200 bg-white p-4"
+                                        >
+                                            <div className="flex-1 min-w-0">
+                                                <div className="font-semibold text-slate-900 truncate">{device.displayName}</div>
+                                                <div className="text-xs text-slate-500">
+                                                    {device.type}{device.localization || device.location ? ` • ${device.localization ?? device.location}` : ""}
+                                                </div>
                                             </div>
 
                                             {device.type === "switch" && (
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-sm text-slate-600">Target</span>
+                                                    <span className="text-sm font-semibold text-slate-700">Target</span>
                                                     <button
                                                         type="button"
                                                         disabled={isBusy}
                                                         onClick={() => updateSwitch(a.deviceId, a.targetValue !== 1)}
-                                                        className="px-4 py-2 rounded-md bg-slate-100 hover:bg-slate-200 disabled:opacity-50"
+                                                        className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
                                                     >
                                                         {a.targetValue === 1 ? "ON" : "OFF"}
                                                     </button>
@@ -216,10 +250,10 @@ export default function CreateSceneModal({ open, devices, authToken, onClose, on
 
                                             {device.type === "slider" && (
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-sm text-slate-600">Target</span>
+                                                    <span className="text-sm font-semibold text-slate-700">Target</span>
                                                     <input
                                                         type="number"
-                                                        className="w-32 border rounded px-2 py-2"
+                                                        className="w-36 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100 disabled:opacity-60"
                                                         min={device.config?.min ?? 0}
                                                         max={device.config?.max ?? 100}
                                                         step={device.config?.step ?? 1}
@@ -237,7 +271,7 @@ export default function CreateSceneModal({ open, devices, authToken, onClose, on
                                                 type="button"
                                                 onClick={() => removeAction(a.deviceId)}
                                                 disabled={isBusy}
-                                                className="px-3 py-2 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-50"
+                                                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
                                             >
                                                 Remove
                                             </button>
@@ -249,16 +283,16 @@ export default function CreateSceneModal({ open, devices, authToken, onClose, on
                     </div>
                 </div>
 
-                <div className="mt-6 flex justify-end gap-2">
+                <div className="flex flex-col-reverse gap-3 border-t border-slate-100 px-6 py-5 sm:flex-row sm:items-center sm:justify-end">
                     <button
-                        className="px-4 py-2 rounded bg-slate-100 text-slate-800 hover:bg-slate-200 disabled:opacity-50"
+                        className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
                         onClick={onClose}
                         disabled={isBusy}
                     >
                         Cancel
                     </button>
                     <button
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow hover:from-blue-700 hover:to-cyan-700 disabled:opacity-50"
+                        className="rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg hover:from-blue-700 hover:to-cyan-700 disabled:opacity-60"
                         onClick={createScene}
                         disabled={isBusy || !name.trim()}
                     >

@@ -305,12 +305,18 @@ function CreateAutomationModal({ open, onClose, onCreated, authToken, devices, s
         "border-b-2 border-r-2 border-white rounded-[1px] " +
         "opacity-0 peer-checked:opacity-100";
 
+    const inputClassName =
+        "mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none " +
+        "focus:border-blue-300 focus:ring-4 focus:ring-blue-100 disabled:opacity-60";
+
+    const selectClassName = inputClassName;
+
     const conditionUnitLabel = (!isBoolUnit(conditionUnit) && conditionUnit) ? conditionUnit : "";
     const actionUnitLabel = (!isBoolUnit(actionUnit) && actionUnit) ? actionUnit : "";
 
     const triggerValueInput = isBoolUnit(conditionUnit) ? (
         <select
-            className="mt-1 w-full border rounded px-2 py-1"
+            className={selectClassName}
             value={toNumber(conditionValue, 0) > 0 ? "1" : "0"}
             onChange={(e) => setConditionValue(e.target.value)}
             disabled={saving}
@@ -319,9 +325,9 @@ function CreateAutomationModal({ open, onClose, onCreated, authToken, devices, s
             <option value="1">On</option>
         </select>
     ) : (
-        <div className="mt-1 flex items-center gap-2">
+        <div className="mt-2 flex items-center gap-2">
             <input
-                className="w-full border rounded px-2 py-1"
+                className={inputClassName}
                 type="number"
                 value={conditionValue}
                 min={conditionLimits.min}
@@ -340,7 +346,7 @@ function CreateAutomationModal({ open, onClose, onCreated, authToken, devices, s
             : isBoolUnit(actionUnit)
                 ? (
                     <select
-                        className="mt-1 w-full border rounded px-2 py-1"
+                        className={selectClassName}
                         value={toNumber(actionTargetValue, 0) > 0 ? "1" : "0"}
                         onChange={(e) => setActionTargetValue(e.target.value)}
                         disabled={saving}
@@ -350,9 +356,9 @@ function CreateAutomationModal({ open, onClose, onCreated, authToken, devices, s
                     </select>
                 )
                 : (
-                    <div className="mt-1 flex items-center gap-2">
+                    <div className="mt-2 flex items-center gap-2">
                         <input
-                            className="w-full border rounded px-2 py-1"
+                            className={inputClassName}
                             type="number"
                             value={actionTargetValue}
                             min={actionLimits.min}
@@ -366,21 +372,29 @@ function CreateAutomationModal({ open, onClose, onCreated, authToken, devices, s
                 );
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div className="bg-white rounded-lg shadow-lg p-6 w-11/12 max-w-2xl">
-                <div className="flex items-center justify-between gap-3 mb-4">
-                    <h3 className="text-lg font-semibold">Create Automation</h3>
-                    <button className="px-3 py-2 bg-slate-100 rounded" onClick={onClose} disabled={saving}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm px-4">
+            <div className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
+                    <div>
+                        <h3 className="text-lg font-semibold text-slate-900">Create Automation</h3>
+                        <div className="mt-0.5 text-sm text-slate-500">Configure trigger and action.</div>
+                    </div>
+
+                    <button
+                        className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                        onClick={onClose}
+                        disabled={saving}
+                    >
                         Close
                     </button>
                 </div>
 
-                <div className="space-y-5">
+                <div className="px-6 py-5 space-y-5">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <label className="block text-sm">
+                        <label className="block text-sm font-semibold text-slate-700">
                             Name
                             <input
-                                className="mt-1 w-full border rounded px-2 py-1"
+                                className={inputClassName}
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
                                 disabled={saving}
@@ -398,173 +412,189 @@ function CreateAutomationModal({ open, onClose, onCreated, authToken, devices, s
                             <span className={checkboxBoxClassName} aria-hidden="true">
                                 <span className={checkboxMarkClassName} />
                             </span>
-                            <span className="font-medium text-slate-800">Enabled</span>
+                            <span className="font-semibold text-slate-800">Enabled</span>
                         </label>
                     </div>
 
-                    <div className="border rounded-md p-3">
-                        <div className="text-sm font-semibold text-slate-800 mb-2">Trigger</div>
+                    <div className="rounded-2xl border border-slate-200 bg-white">
+                        <div className="border-b border-slate-100 px-4 py-3">
+                            <div className="text-sm font-semibold text-slate-900">Trigger</div>
+                        </div>
 
-                        <label className="inline-flex items-center gap-2 text-sm select-none cursor-pointer">
-                            <input
-                                type="checkbox"
-                                className={checkboxInputClassName}
-                                checked={useTimeWindow}
-                                onChange={(e) => setUseTimeWindow(e.target.checked)}
-                                disabled={saving}
-                            />
-                            <span className={checkboxBoxClassName} aria-hidden="true">
-                                <span className={checkboxMarkClassName} />
-                            </span>
-                            <span className="font-medium text-slate-800">Use time window</span>
-                        </label>
-
-                        <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                            <label className={`block text-sm ${timeInputsDisabled ? "opacity-60" : ""}`}>
-                                From
-                                <input
-                                    className="mt-1 w-full border rounded px-2 py-1"
-                                    type="time"
-                                    value={from}
-                                    onChange={(e) => setFrom(e.target.value)}
-                                    disabled={timeInputsDisabled}
-                                />
-                            </label>
-
-                            <label className={`block text-sm ${timeInputsDisabled ? "opacity-60" : ""}`}>
-                                To
-                                <input
-                                    className="mt-1 w-full border rounded px-2 py-1"
-                                    type="time"
-                                    value={to}
-                                    onChange={(e) => setTo(e.target.value)}
-                                    disabled={timeInputsDisabled}
-                                />
-                            </label>
-
-                            <label
-                                className={`inline-flex items-center gap-2 text-sm mt-6 select-none cursor-pointer ${timeInputsDisabled ? "opacity-60" : ""}`}
-                            >
+                        <div className="px-4 py-4 space-y-4">
+                            <label className="inline-flex items-center gap-2 text-sm select-none cursor-pointer">
                                 <input
                                     type="checkbox"
                                     className={checkboxInputClassName}
-                                    checked={wrapMidnight}
-                                    onChange={(e) => setWrapMidnight(e.target.checked)}
-                                    disabled={timeInputsDisabled}
+                                    checked={useTimeWindow}
+                                    onChange={(e) => setUseTimeWindow(e.target.checked)}
+                                    disabled={saving}
                                 />
                                 <span className={checkboxBoxClassName} aria-hidden="true">
                                     <span className={checkboxMarkClassName} />
                                 </span>
-                                <span className="font-medium text-slate-800">Wrap midnight</span>
+                                <span className="font-semibold text-slate-800">Use time window</span>
                             </label>
-                        </div>
 
-                        <div className="mt-4 grid grid-cols-1 sm:grid-cols-4 gap-3">
-                            <label className="block text-sm sm:col-span-2">
-                                Device
-                                <select
-                                    className="mt-1 w-full border rounded px-2 py-1"
-                                    value={conditionDeviceId}
-                                    onChange={(e) => setConditionDeviceId(e.target.value)}
-                                    disabled={saving}
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <label className={`block text-sm font-semibold text-slate-700 ${timeInputsDisabled ? "opacity-60" : ""}`}>
+                                    From
+                                    <input
+                                        className={inputClassName}
+                                        type="time"
+                                        value={from}
+                                        onChange={(e) => setFrom(e.target.value)}
+                                        disabled={timeInputsDisabled}
+                                    />
+                                </label>
+
+                                <label className={`block text-sm font-semibold text-slate-700 ${timeInputsDisabled ? "opacity-60" : ""}`}>
+                                    To
+                                    <input
+                                        className={inputClassName}
+                                        type="time"
+                                        value={to}
+                                        onChange={(e) => setTo(e.target.value)}
+                                        disabled={timeInputsDisabled}
+                                    />
+                                </label>
+
+                                <label
+                                    className={`inline-flex items-center gap-2 text-sm mt-6 select-none cursor-pointer ${timeInputsDisabled ? "opacity-60" : ""}`}
                                 >
-                                    {deviceOptions.map(d => (
-                                        <option key={d.id} value={d.id}>
-                                            {d.displayName ?? d.id}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
+                                    <input
+                                        type="checkbox"
+                                        className={checkboxInputClassName}
+                                        checked={wrapMidnight}
+                                        onChange={(e) => setWrapMidnight(e.target.checked)}
+                                        disabled={timeInputsDisabled}
+                                    />
+                                    <span className={checkboxBoxClassName} aria-hidden="true">
+                                        <span className={checkboxMarkClassName} />
+                                    </span>
+                                    <span className="font-semibold text-slate-800">Wrap midnight</span>
+                                </label>
+                            </div>
 
-                            <label className="block text-sm">
-                                Op
-                                <select
-                                    className="mt-1 w-full border rounded px-2 py-1"
-                                    value={conditionOp}
-                                    onChange={(e) => setConditionOp(e.target.value)}
-                                    disabled={saving}
-                                >
-                                    {operatorOptions.map(o => (
-                                        <option key={o.value} value={o.value}>
-                                            {o.label}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
-
-                            <label className="block text-sm">
-                                Value
-                                {triggerValueInput}
-                            </label>
-                        </div>
-                    </div>
-
-                    <div className="border rounded-md p-3">
-                        <div className="text-sm font-semibold text-slate-800 mb-2">Action</div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                            <label className="block text-sm">
-                                Kind
-                                <select
-                                    className="mt-1 w-full border rounded px-2 py-1"
-                                    value={actionKind}
-                                    onChange={(e) => setActionKind(e.target.value)}
-                                    disabled={saving}
-                                >
-                                    <option value="SetDeviceState">Set device state</option>
-                                    <option value="RunScene">Run scene</option>
-                                </select>
-                            </label>
-
-                            {actionKind === "SetDeviceState" ? (
-                                <>
-                                    <label className="block text-sm">
-                                        Device
-                                        <select
-                                            className="mt-1 w-full border rounded px-2 py-1"
-                                            value={actionDeviceId}
-                                            onChange={(e) => setActionDeviceId(e.target.value)}
-                                            disabled={saving}
-                                        >
-                                            {deviceOptions.map(d => (
-                                                <option key={d.id} value={d.id}>
-                                                    {d.displayName ?? d.id}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </label>
-
-                                    <label className="block text-sm">
-                                        Value
-                                        {actionValueInput}
-                                    </label>
-                                </>
-                            ) : (
-                                <label className="block text-sm sm:col-span-2">
-                                    Scene
+                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                                <label className="block text-sm font-semibold text-slate-700 sm:col-span-2">
+                                    Device
                                     <select
-                                        className="mt-1 w-full border rounded px-2 py-1"
-                                        value={actionSceneId}
-                                        onChange={(e) => setActionSceneId(e.target.value)}
+                                        className={selectClassName}
+                                        value={conditionDeviceId}
+                                        onChange={(e) => setConditionDeviceId(e.target.value)}
                                         disabled={saving}
                                     >
-                                        {sceneOptions.map(s => (
-                                            <option key={s.id} value={s.id}>
-                                                {s.name ?? s.id}
+                                        {deviceOptions.map(d => (
+                                            <option key={d.id} value={d.id}>
+                                                {d.displayName ?? d.id}
                                             </option>
                                         ))}
                                     </select>
                                 </label>
-                            )}
+
+                                <label className="block text-sm font-semibold text-slate-700">
+                                    Operator
+                                    <select
+                                        className={selectClassName}
+                                        value={conditionOp}
+                                        onChange={(e) => setConditionOp(e.target.value)}
+                                        disabled={saving}
+                                    >
+                                        {operatorOptions.map(o => (
+                                            <option key={o.value} value={o.value}>
+                                                {o.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </label>
+
+                                <label className="block text-sm font-semibold text-slate-700">
+                                    Value
+                                    {triggerValueInput}
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-200 bg-white">
+                        <div className="border-b border-slate-100 px-4 py-3">
+                            <div className="text-sm font-semibold text-slate-900">Action</div>
+                        </div>
+
+                        <div className="px-4 py-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <label className="block text-sm font-semibold text-slate-700">
+                                    Kind
+                                    <select
+                                        className={selectClassName}
+                                        value={actionKind}
+                                        onChange={(e) => setActionKind(e.target.value)}
+                                        disabled={saving}
+                                    >
+                                        <option value="SetDeviceState">Set device state</option>
+                                        <option value="RunScene">Run scene</option>
+                                    </select>
+                                </label>
+
+                                {actionKind === "SetDeviceState" ? (
+                                    <>
+                                        <label className="block text-sm font-semibold text-slate-700">
+                                            Device
+                                            <select
+                                                className={selectClassName}
+                                                value={actionDeviceId}
+                                                onChange={(e) => setActionDeviceId(e.target.value)}
+                                                disabled={saving}
+                                            >
+                                                {deviceOptions.map(d => (
+                                                    <option key={d.id} value={d.id}>
+                                                        {d.displayName ?? d.id}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </label>
+
+                                        <label className="block text-sm font-semibold text-slate-700">
+                                            Value
+                                            {actionValueInput}
+                                        </label>
+                                    </>
+                                ) : (
+                                    <label className="block text-sm font-semibold text-slate-700 sm:col-span-2">
+                                        Scene
+                                        <select
+                                            className={selectClassName}
+                                            value={actionSceneId}
+                                            onChange={(e) => setActionSceneId(e.target.value)}
+                                            disabled={saving}
+                                        >
+                                            {sceneOptions.map(s => (
+                                                <option key={s.id} value={s.id}>
+                                                    {s.name ?? s.id}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </label>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="mt-6 flex justify-end gap-2">
-                    <button className="px-4 py-2 bg-slate-100 rounded" onClick={onClose} disabled={saving}>
+                <div className="flex flex-col-reverse gap-3 border-t border-slate-100 px-6 py-5 sm:flex-row sm:items-center sm:justify-end">
+                    <button
+                        className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                        onClick={onClose}
+                        disabled={saving}
+                    >
                         Cancel
                     </button>
-                    <button className="px-4 py-2 bg-blue-600 text-white rounded" onClick={handleCreate} disabled={saving}>
+                    <button
+                        className="rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg hover:from-blue-700 hover:to-cyan-700 disabled:opacity-60"
+                        onClick={handleCreate}
+                        disabled={saving}
+                    >
                         {saving ? "Creating..." : "Create"}
                     </button>
                 </div>
