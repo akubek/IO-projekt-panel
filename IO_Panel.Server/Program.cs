@@ -1,5 +1,4 @@
-﻿using IO_Panel.Server.Services.Time;
-using System.Text;
+﻿using IO_Panel.Server.Configuration;
 using IO_Panel.Server.Consumers;
 using IO_Panel.Server.Data;
 using IO_Panel.Server.Hubs;
@@ -7,28 +6,47 @@ using IO_Panel.Server.Models;
 using IO_Panel.Server.Repositories;
 using IO_Panel.Server.Repositories.Ef;
 using IO_Panel.Server.Services.Automations;
+using IO_Panel.Server.Services.Time;
 using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var iniPath = Path.Combine(AppContext.BaseDirectory, "panel.ini");
+var iniValues = IniFile.ReadKeyValues(iniPath);
+
+if (iniValues.Count > 0)
+{
+    builder.Configuration.AddInMemoryCollection(iniValues);
+}
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("ClientDev", policy =>
     {
+        var origin = builder.Configuration["Client:DevOrigin"] ?? "https://localhost:52795";
         policy
-            .WithOrigins("https://localhost:52795")
+            .WithOrigins(origin)
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
     });
 });
 
-// Dev-only signing key (must be 32+ bytes for HS256 safety)
-const string jwtKey = "dev-admin-auth-key-abcdefghijklmnoprstuwvxyz0123456789";
+// Bind URL (requires restart after change)
+var urls = builder.Configuration["Panel:Urls"];
+if (!string.IsNullOrWhiteSpace(urls) && string.IsNullOrWhiteSpace(builder.Configuration["ASPNETCORE_URLS"]))
+{
+    builder.WebHost.UseUrls(urls);
+}
+
+var jwtKey = builder.Configuration["AdminAuth:JwtKey"]
+    ?? "dev-admin-auth-key-abcdefghijklmnoprstuwvxyz0123456789";
+
 var jwtKeyBytes = Encoding.UTF8.GetBytes(jwtKey);
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -77,6 +95,8 @@ var sqliteConnectionString = builder.Configuration.GetConnectionString("AppDb")
     ?? "Data Source=app.db";
 
 Console.WriteLine($"SQLite connection: {sqliteConnectionString}");
+Console.WriteLine($"Using ini: {iniPath}");
+Console.WriteLine($"AdminAuth.Username: {builder.Configuration["AdminAuth:Username"]}");
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(sqliteConnectionString));
@@ -96,16 +116,28 @@ builder.Services.AddMassTransit(x =>
 
     x.UsingRabbitMq((context, cfg) =>
     {
-        cfg.Host("localhost", "/", h =>
+        var host = builder.Configuration["RabbitMq:Host"] ?? "localhost";
+        var vhost = builder.Configuration["RabbitMq:VirtualHost"] ?? "/";
+        var user = builder.Configuration["RabbitMq:Username"] ?? "guest";
+        var pass = builder.Configuration["RabbitMq:Password"] ?? "guest";
+        var port = int.TryParse(builder.Configuration["RabbitMq:Port"], out var p) ? p : 5672;
+
+        var normalizedVhost = vhost.TrimStart('/');
+        var rabbitMqUri = new Uri($"rabbitmq://{host}:{port}/{normalizedVhost}");
+
+        cfg.Host(rabbitMqUri, h =>
         {
-            h.Username("guest");
-            h.Password("guest");
+            h.Username(user);
+            h.Password(pass);
         });
 
-        cfg.ReceiveEndpoint("device-updates", e =>
+        var receiveEndpoint = builder.Configuration["RabbitMq:ReceiveEndpoint"] ?? "device-updates";
+        var bindExchange = builder.Configuration["RabbitMq:BindExchange"] ?? "device-updated";
+
+        cfg.ReceiveEndpoint(receiveEndpoint, e =>
         {
             e.ConfigureConsumeTopology = false;
-            e.Bind("device-updated");
+            e.Bind(bindExchange);
             e.ConfigureConsumer<DeviceUpdatedEventConsumer>(context);
         });
     });
