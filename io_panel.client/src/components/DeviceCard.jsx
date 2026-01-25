@@ -92,6 +92,11 @@ export default function DeviceCard({ device, onSelect, isAdmin, onDelete, onTogg
     const roomsText = (roomNames ?? []).filter(Boolean).join(", ");
     const hasRooms = !!roomsText;
 
+    const isOffline = String(device?.status ?? "").trim().toLowerCase() === "offline";
+    const warningText = isOffline
+        ? "Warning: device is offline"
+        : (device.malfunctioning ? "Warning: device malfunctioning" : null);
+
     return (
         <div className="w-full">
             <div className="max-w-sm w-full">
@@ -223,11 +228,11 @@ export default function DeviceCard({ device, onSelect, isAdmin, onDelete, onTogg
                         )}
                     </div>
 
-                    {device.malfunctioning && (
+                    {warningText && (
                         <div className="px-6 pb-5">
                             <div className="flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
                                 <AlertTriangle className="w-4 h-4" />
-                                <span>Warning: device malfunctioning</span>
+                                <span>{warningText}</span>
                             </div>
                         </div>
                     )}

@@ -52,21 +52,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         {
             OnTokenValidated = context =>
             {
-                var user = context.Principal;
-
                 var logger = context.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>()
                     .CreateLogger("JwtAuth");
 
-                var name = user?.Identity?.Name ?? "(no name)";
-                logger.LogInformation("Token validated. Name={Name}", name);
-
-                if (user is not null)
-                {
-                    foreach (var claim in user.Claims)
-                    {
-                        logger.LogInformation("Claim: {Type} = {Value}", claim.Type, claim.Value);
-                    }
-                }
+                var name = context.Principal?.Identity?.Name ?? "(no name)";
+                logger.LogDebug("Token validated. Name={Name}", name);
 
                 return Task.CompletedTask;
             },
@@ -74,7 +64,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             {
                 var logger = context.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>()
                     .CreateLogger("JwtAuth");
-                logger.LogWarning("Forbidden: {Path}", context.HttpContext.Request.Path);
+                logger.LogDebug("Forbidden: {Path}", context.HttpContext.Request.Path);
                 return Task.CompletedTask;
             }
         };

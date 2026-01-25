@@ -84,7 +84,9 @@ public sealed class AutomationRunner : IAutomationRunner
         var from = window.From;
         var to = window.To;
 
-        if (!window.WrapMidnight || from <= to)
+        // If From <= To: normal window.
+        // If From > To: wraps across midnight.
+        if (from <= to)
         {
             return now >= from && now <= to;
         }

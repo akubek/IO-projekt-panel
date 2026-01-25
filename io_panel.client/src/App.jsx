@@ -77,6 +77,16 @@ function App() {
         return () => window.clearInterval(id);
     }, []);
 
+    useEffect(() => {
+        const id = window.setInterval(() => {
+            void populateDeviceData();
+            // Rooms store their own device snapshots, so refresh them too to clear Offline status in room cards.
+            void populateRoomData();
+        }, 5000);
+
+        return () => window.clearInterval(id);
+    }, [authToken]);
+
     async function refreshTime() {
         try {
             const res = await fetch("/time");
@@ -109,7 +119,8 @@ function App() {
                             value: update.value ?? d.state?.value ?? 0,
                             unit: update.unit ?? d.state?.unit
                         },
-                        malfunctioning: update.malfunctioning ?? d.malfunctioning
+                        malfunctioning: update.malfunctioning ?? d.malfunctioning,
+                        status: update.status ?? d.status
                     };
                 })
             );
@@ -132,7 +143,8 @@ function App() {
                                 value: update.value ?? d.state?.value ?? 0,
                                 unit: update.unit ?? d.state?.unit
                             },
-                            malfunctioning: update.malfunctioning ?? d.malfunctioning
+                            malfunctioning: update.malfunctioning ?? d.malfunctioning,
+                            status: update.status ?? d.status
                         };
                     });
 
@@ -152,7 +164,8 @@ function App() {
                         value: update.value ?? prev.state?.value ?? 0,
                         unit: update.unit ?? prev.state?.unit
                     },
-                    malfunctioning: update.malfunctioning ?? prev.malfunctioning
+                    malfunctioning: update.malfunctioning ?? prev.malfunctioning,
+                    status: update.status ?? prev.status
                 };
             });
 
@@ -819,10 +832,18 @@ function App() {
     );
 
     async function populateDeviceData() {
-        const response = await fetch('/device');
-        if (response.ok) {
+        try {
+            const response = await fetch('/device');
+            if (!response.ok) {
+                const text = await response.text();
+                console.error(`Failed to fetch devices: ${response.status} ${text}`);
+                return;
+            }
+
             const data = await response.json();
-            setDevices(data);
+            setDevices(Array.isArray(data) ? data : []);
+        } catch (err) {
+            console.error("Failed to fetch devices:", err);
         }
     }
 
@@ -833,11 +854,27 @@ function App() {
 
             const roomsData = await roomsResponse.json();
 
+            const devicesById = new Map((devices ?? []).map((d) => [d.id, d]));
+
             const roomsWithDevices = await Promise.all(
                 roomsData.map(async (room) => {
                     const devicesResponse = await fetch(`/room/${room.id}/devices`);
-                    const devicesData = devicesResponse.ok ? await devicesResponse.json() : [];
-                    return { ...room, devices: devicesData };
+
+                    if (devicesResponse.ok) {
+                        const devicesData = await devicesResponse.json();
+                        return { ...room, devices: Array.isArray(devicesData) ? devicesData : [] };
+                    }
+
+                    // Fallback: derive room devices from the IDs already present on the room payload
+                    const roomDeviceIds = (room.devices ?? [])
+                        .map((d) => d?.id)
+                        .filter(Boolean);
+
+                    const fallbackDevices = roomDeviceIds
+                        .map((id) => devicesById.get(id))
+                        .filter(Boolean);
+
+                    return { ...room, devices: fallbackDevices };
                 })
             );
 

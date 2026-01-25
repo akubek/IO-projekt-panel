@@ -47,14 +47,13 @@ function formatTimeWindow(window) {
 
     const from = window.from ?? window.From;
     const to = window.to ?? window.To;
-    const wrapMidnight = window.wrapMidnight ?? window.WrapMidnight;
 
     if (!from || !to) return null;
 
     const fromText = String(from).slice(0, 5);
     const toText = String(to).slice(0, 5);
 
-    return `${fromText} - ${toText}${wrapMidnight ? " (wrap)" : ""}`;
+    return `${fromText} - ${toText}`;
 }
 
 function AutomationCard({ automation, isAdmin, onDelete, onToggleEnabled, deviceById, sceneById }) {

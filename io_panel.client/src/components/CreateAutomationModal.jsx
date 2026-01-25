@@ -78,7 +78,6 @@ function CreateAutomationModal({ open, onClose, onCreated, authToken, devices, s
     const [useTimeWindow, setUseTimeWindow] = useState(false);
     const [from, setFrom] = useState("18:00");
     const [to, setTo] = useState("23:59");
-    const [wrapMidnight, setWrapMidnight] = useState(false);
 
     const [conditionDeviceId, setConditionDeviceId] = useState("");
     const [conditionOp, setConditionOp] = useState("GreaterThanOrEqual");
@@ -90,6 +89,8 @@ function CreateAutomationModal({ open, onClose, onCreated, authToken, devices, s
     const [actionSceneId, setActionSceneId] = useState("");
 
     const deviceOptions = useMemo(() => (devices ?? []), [devices]);
+    const writableDeviceOptions = useMemo(() => deviceOptions.filter(d => !d?.config?.readOnly), [deviceOptions]);
+
     const sceneOptions = useMemo(() => (scenes ?? []), [scenes]);
 
     const deviceById = useMemo(() => {
@@ -118,6 +119,8 @@ function CreateAutomationModal({ open, onClose, onCreated, authToken, devices, s
         if (!open) return;
 
         const defaultDeviceId = deviceOptions[0]?.id ?? "";
+        const defaultWritableDeviceId = writableDeviceOptions[0]?.id ?? "";
+
         const defaultSceneId = sceneOptions[0]?.id ?? "";
 
         setName("");
@@ -126,17 +129,16 @@ function CreateAutomationModal({ open, onClose, onCreated, authToken, devices, s
         setUseTimeWindow(false);
         setFrom("18:00");
         setTo("23:59");
-        setWrapMidnight(false);
 
         setConditionDeviceId(defaultDeviceId);
         setConditionOp("GreaterThanOrEqual");
         setConditionValue("1");
 
         setActionKind("SetDeviceState");
-        setActionDeviceId(defaultDeviceId);
+        setActionDeviceId(defaultWritableDeviceId);
         setActionTargetValue("1");
         setActionSceneId(defaultSceneId);
-    }, [open]);
+    }, [open]); // intentionally only on open
 
     useEffect(() => {
         if (!open) return;
@@ -145,14 +147,29 @@ function CreateAutomationModal({ open, onClose, onCreated, authToken, devices, s
             setConditionDeviceId(deviceOptions[0].id);
         }
 
-        if (!actionDeviceId && deviceOptions.length > 0) {
-            setActionDeviceId(deviceOptions[0].id);
+        if (actionKind === "SetDeviceState") {
+            const selected = deviceById.get(actionDeviceId);
+            const selectedIsReadOnly = !!selected?.config?.readOnly;
+
+            if ((!actionDeviceId || selectedIsReadOnly) && writableDeviceOptions.length > 0) {
+                setActionDeviceId(writableDeviceOptions[0].id);
+            }
         }
 
         if (!actionSceneId && sceneOptions.length > 0) {
             setActionSceneId(sceneOptions[0].id);
         }
-    }, [open, conditionDeviceId, actionDeviceId, actionSceneId, deviceOptions, sceneOptions]);
+    }, [
+        open,
+        actionKind,
+        conditionDeviceId,
+        actionDeviceId,
+        actionSceneId,
+        deviceOptions,
+        writableDeviceOptions,
+        sceneOptions,
+        deviceById
+    ]);
 
     useEffect(() => {
         if (!open) return;
@@ -163,7 +180,7 @@ function CreateAutomationModal({ open, onClose, onCreated, authToken, devices, s
         const clamped = clamp(current, min, max);
         const stepped = roundToStep(clamped, min, step);
         setConditionValue(String(stepped));
-    }, [open, conditionDeviceId]);
+    }, [open, conditionDeviceId]); // keep existing behavior
 
     useEffect(() => {
         if (!open) return;
@@ -174,7 +191,7 @@ function CreateAutomationModal({ open, onClose, onCreated, authToken, devices, s
         const clamped = clamp(current, min, max);
         const stepped = roundToStep(clamped, min, step);
         setActionTargetValue(String(stepped));
-    }, [open, actionDeviceId]);
+    }, [open, actionDeviceId]); // keep existing behavior
 
     if (!open) return null;
 
@@ -191,9 +208,17 @@ function CreateAutomationModal({ open, onClose, onCreated, authToken, devices, s
             return;
         }
 
-        if (actionKind === "SetDeviceState" && !actionDeviceId) {
-            alert("Select a device for the action.");
-            return;
+        if (actionKind === "SetDeviceState") {
+            if (!actionDeviceId) {
+                alert("Select a device for the action.");
+                return;
+            }
+
+            const device = deviceById.get(actionDeviceId);
+            if (device?.config?.readOnly) {
+                alert("Selected device is read-only and cannot be controlled.");
+                return;
+            }
         }
 
         if (actionKind === "RunScene" && !actionSceneId) {
@@ -229,14 +254,7 @@ function CreateAutomationModal({ open, onClose, onCreated, authToken, devices, s
                     value: safeConditionValue,
                     unit: conditionUnit || null
                 }
-            ],
-            timeWindow: useTimeWindow
-                ? {
-                    from: normalizeTimeToHhMmSs(from),
-                    to: normalizeTimeToHhMmSs(to),
-                    wrapMidnight: !!wrapMidnight
-                }
-                : null
+            ]
         };
 
         const action =
@@ -458,22 +476,6 @@ function CreateAutomationModal({ open, onClose, onCreated, authToken, devices, s
                                         disabled={timeInputsDisabled}
                                     />
                                 </label>
-
-                                <label
-                                    className={`inline-flex items-center gap-2 text-sm mt-6 select-none cursor-pointer ${timeInputsDisabled ? "opacity-60" : ""}`}
-                                >
-                                    <input
-                                        type="checkbox"
-                                        className={checkboxInputClassName}
-                                        checked={wrapMidnight}
-                                        onChange={(e) => setWrapMidnight(e.target.checked)}
-                                        disabled={timeInputsDisabled}
-                                    />
-                                    <span className={checkboxBoxClassName} aria-hidden="true">
-                                        <span className={checkboxMarkClassName} />
-                                    </span>
-                                    <span className="font-semibold text-slate-800">Wrap midnight</span>
-                                </label>
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
@@ -547,7 +549,7 @@ function CreateAutomationModal({ open, onClose, onCreated, authToken, devices, s
                                                 onChange={(e) => setActionDeviceId(e.target.value)}
                                                 disabled={saving}
                                             >
-                                                {deviceOptions.map(d => (
+                                                {writableDeviceOptions.map(d => (
                                                     <option key={d.id} value={d.id}>
                                                         {d.displayName ?? d.id}
                                                     </option>

@@ -28,15 +28,25 @@ namespace IO_Panel.Server.Controllers
         [HttpGet(Name = "GetDevices")]
         public async Task<ActionResult<IEnumerable<Device>>> Get(CancellationToken ct)
         {
+            var devices = await _repo.GetConfiguredDevicesAsync(ct);
+
             try
             {
-                var devices = await _repo.GetConfiguredDevicesAsync(ct);
+                // If your repo/API sync logic lives elsewhere, keep it there.
+                // The key point is: do NOT fail the request when API is down.
                 return Ok(devices);
             }
             catch (HttpRequestException ex)
             {
-                _logger.LogError(ex, "Failed to load devices from external API.");
-                return StatusCode(StatusCodes.Status503ServiceUnavailable, "Device API is unavailable.");
+                _logger.LogWarning(ex, "Device API is unavailable. Returning DB devices as Offline/Malfunctioning.");
+
+                foreach (var device in devices)
+                {
+                    device.Status = "Offline";
+                    device.Malfunctioning = true;
+                }
+
+                return Ok(devices);
             }
         }
 

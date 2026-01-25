@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -33,9 +34,19 @@ public sealed class EfDeviceRepository : IDeviceRepository
             .OrderBy(d => d.DisplayName)
             .ToListAsync(cancellationToken);
 
-        // Fetch external devices once for enrichment
-        var apiDevices = (await _deviceApiClient.GetAllAsync(cancellationToken))
-            .ToDictionary(d => d.Id);
+        Dictionary<string, ApiDevice> apiDevices;
+
+        try
+        {
+            // Fetch external devices once for enrichment
+            apiDevices = (await _deviceApiClient.GetAllAsync(cancellationToken))
+                .ToDictionary(d => d.Id);
+        }
+        catch (HttpRequestException)
+        {
+            // External API is down: treat as "no devices online"
+            apiDevices = new Dictionary<string, ApiDevice>(StringComparer.OrdinalIgnoreCase);
+        }
 
         var result = new List<Device>(entities.Count);
 
@@ -45,7 +56,6 @@ public sealed class EfDeviceRepository : IDeviceRepository
 
             if (apiDevices.TryGetValue(entity.Id, out var api))
             {
-                // Merge live state/malfunctioning from API into the persisted device
                 domain.State = new DeviceState
                 {
                     Value = api.State?.Value ?? domain.State.Value,
@@ -59,6 +69,7 @@ public sealed class EfDeviceRepository : IDeviceRepository
             else
             {
                 domain.Status = "Offline";
+                domain.Malfunctioning = true;
             }
 
             result.Add(domain);
@@ -89,7 +100,17 @@ public sealed class EfDeviceRepository : IDeviceRepository
 
         var domain = ToDomain(entity);
 
-        var apiDevice = await _deviceApiClient.GetByIdAsync(id, cancellationToken);
+        ApiDevice? apiDevice = null;
+
+        try
+        {
+            apiDevice = await _deviceApiClient.GetByIdAsync(id, cancellationToken);
+        }
+        catch (HttpRequestException)
+        {
+            apiDevice = null;
+        }
+
         if (apiDevice != null)
         {
             domain.State = new DeviceState

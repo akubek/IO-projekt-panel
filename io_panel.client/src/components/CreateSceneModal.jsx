@@ -20,10 +20,14 @@ export default function CreateSceneModal({ open, devices, authToken, onClose, on
         return (devices ?? []).filter(d => (d.type === "switch" || d.type === "slider"));
     }, [devices]);
 
+    const writableEligibleDevices = useMemo(() => {
+        return eligibleDevices.filter(d => !d?.config?.readOnly);
+    }, [eligibleDevices]);
+
     const availableToAdd = useMemo(() => {
         const used = new Set(Object.keys(actions));
-        return eligibleDevices.filter(d => !used.has(d.id));
-    }, [eligibleDevices, actions]);
+        return writableEligibleDevices.filter(d => !used.has(d.id));
+    }, [writableEligibleDevices, actions]);
 
     // Hard-block: non-admins cannot create scenes.
     if (!open || !isAdmin) return null;
@@ -52,6 +56,10 @@ export default function CreateSceneModal({ open, devices, authToken, onClose, on
 
         const device = (devices ?? []).find(d => d.id === id);
         if (!device) return;
+
+        if (device.config?.readOnly) {
+            return;
+        }
 
         if (device.type === "switch") {
             setActions(prev => ({
@@ -94,6 +102,16 @@ export default function CreateSceneModal({ open, devices, authToken, onClose, on
     async function createScene() {
         const sceneName = name.trim();
         if (!sceneName) return;
+
+        const hasReadOnly = Object.values(actions).some(a => {
+            const device = (devices ?? []).find(d => d.id === a.deviceId);
+            return !!device?.config?.readOnly;
+        });
+
+        if (hasReadOnly) {
+            console.error("Cannot create a scene with read-only devices.");
+            return;
+        }
 
         const actionList = Object.values(actions).map(a => ({
             deviceId: a.deviceId,

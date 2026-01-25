@@ -14,10 +14,7 @@ namespace IO_Panel.Server.Models
 
     public sealed class AutomationTrigger
     {
-        // All conditions must pass (AND). Keep it simple for now.
         public AutomationCondition[] Conditions { get; set; } = Array.Empty<AutomationCondition>();
-
-        // Optional time-of-day constraint (local time interpretation decided by server)
         public TimeOfDayWindow? TimeWindow { get; set; }
     }
 
@@ -40,24 +37,18 @@ namespace IO_Panel.Server.Models
 
     public sealed class TimeOfDayWindow
     {
-        // "18:00", "06:30", etc.
         public TimeOnly From { get; set; }
         public TimeOnly To { get; set; }
-
-        // If true and From > To, window wraps across midnight (e.g. 22:00-06:00)
-        public bool WrapMidnight { get; set; }
     }
 
     public sealed class AutomationAction
     {
         public AutomationActionKind Kind { get; set; }
 
-        // Kind = SetDeviceState
         public string? DeviceId { get; set; }
         public double? TargetValue { get; set; }
         public string? TargetUnit { get; set; }
 
-        // Kind = RunScene
         public Guid? SceneId { get; set; }
     }
 
