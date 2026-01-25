@@ -1,17 +1,29 @@
 ﻿import React, { useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
 
+/**
+ * Formats a timestamp into a localized 24h or AM/PM string.
+ */
 function formatTime(value) {
     const d = new Date(value);
     if (Number.isNaN(d.getTime())) return "";
     return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
+/**
+ * Type-safe conversion to number with a fallback.
+ */
 function toNumberOr(value, fallback) {
     const n = typeof value === "number" ? value : Number(value);
     return Number.isFinite(n) ? n : fallback;
 }
 
+/*
+  DeviceHistoryChart
+  A specialized data visualization component that renders a time - series line chart
+  using pure SVG.It is designed to display device state history(e.g., temperature
+  over the last hour) with high performance and no external heavy dependencies.
+*/
 export default function DeviceHistoryChart({ deviceId, unit, className, height = 160, refreshToken = 0 }) {
     const [points, setPoints] = useState([]);
     const [isLoading, setIsLoading] = useState(false); // first load only
@@ -73,6 +85,7 @@ export default function DeviceHistoryChart({ deviceId, unit, className, height =
         // points intentionally included so we can detect "hasDataAlready"
     }, [deviceId, refreshToken, points.length]);
 
+    // Chart Calculation Engine 
     const chart = useMemo(() => {
         if (!points || points.length < 2) return null;
 
@@ -109,9 +122,11 @@ export default function DeviceHistoryChart({ deviceId, unit, className, height =
         const plotW = w - padLeft - padRight;
         const plotH = h - padTop - padBottom;
 
+        // Coordinate Mapping Functions
         const toX = (t) => padLeft + ((t - minX) / dx) * plotW;
         const toY = (v) => padTop + (1 - (v - minY) / dy) * plotH;
 
+        // Generate SVG Path String (d attribute)
         const d = points
             .map((p, i) => {
                 const t = new Date(p.recordedAt).getTime();
@@ -182,6 +197,7 @@ export default function DeviceHistoryChart({ deviceId, unit, className, height =
                 </div>
             </div>
 
+            {/* SVG Drawing Area */}
             <div className="rounded-md border border-slate-200 bg-white p-2">
                 <svg viewBox={`0 0 ${chart.w} ${chart.h}`} className="w-full" style={{ height: `${chart.h}px` }}>
                     {chart.gridYs.map((y, i) => (

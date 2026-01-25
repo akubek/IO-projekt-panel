@@ -1,6 +1,12 @@
 import React, { useMemo } from "react";
 import SceneCard from "./SceneCard";
 
+/* 
+  SceneList
+  A structural container component that manages the collection of scenes.
+  It serves as a data - normalization layer, preparing the global device state for 
+  consumption by individual scene cards.
+ */
 function SceneList({ scenes, onActivate, isLoggedIn, devices, isAdmin, onDelete }) {
     const deviceById = useMemo(() => {
         const map = new Map();

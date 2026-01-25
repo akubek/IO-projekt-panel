@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from 'react';
 
+/*
+  ConfigureDeviceModal Component
+  This modal handles the registration of a discovered virtual device into the system.
+  It allows the Administrator to assign a custom "Display Name" to a device
+  detected from the Simulator, effectively moving it from 'unconfigured' to 'active'.
+*/
 export default function ConfigureDeviceModal({ open, apiDevice, onClose, onAdd }) {
     // hooks unconditionally at top
     const [displayName, setDisplayName] = useState('');
@@ -16,6 +22,10 @@ export default function ConfigureDeviceModal({ open, apiDevice, onClose, onAdd }
 
     if (!open) return null;
 
+    /**
+     * Persists the device configuration to the Control Panel backend.
+     * Links the simulator's hardware ID with the user's chosen display name.
+     */
     async function handleAdd() {
         setSaving(true);
 

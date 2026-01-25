@@ -30,6 +30,12 @@ const deviceTypeConfig = {
     }
 };
 
+/*
+  DeviceCard
+  This component renders a single smart home device card.
+  It adapts its visualization and available controls based on the device type
+  (switch, slider, or sensor).
+*/
 export default function DeviceCard({ device, onSelect, isAdmin, onDelete, onToggle, onSetValue, roomNames }) {
     const config = deviceTypeConfig[device.type] || deviceTypeConfig.switch;
     const Icon = config.icon;
@@ -39,6 +45,7 @@ export default function DeviceCard({ device, onSelect, isAdmin, onDelete, onTogg
         return device?.type === 'switch' || device?.type === 'slider';
     }, [device?.config?.readOnly, device?.type]);
 
+    // State Logic
     const isOn = (device.state?.value ?? 0) > 0;
 
     const sliderMin = device.config?.min ?? 0;
@@ -51,6 +58,7 @@ export default function DeviceCard({ device, onSelect, isAdmin, onDelete, onTogg
     const displayedSliderValue = device.type === 'slider' ? (device.state?.value ?? 0) : 0;
     const sliderValueToRender = isDragging ? localSliderValue : displayedSliderValue;
 
+    // Handles device deletion (admin only).
     const handleDelete = (e) => {
         e.stopPropagation();
         if (onDelete) {
@@ -58,6 +66,7 @@ export default function DeviceCard({ device, onSelect, isAdmin, onDelete, onTogg
         }
     };
 
+    // Handles toggle interactions for Switch devices.
     const handleSwitchChange = (e, checked) => {
         e.stopPropagation();
         if (!isControllable || device.type !== 'switch') return;
@@ -67,6 +76,7 @@ export default function DeviceCard({ device, onSelect, isAdmin, onDelete, onTogg
         }
     };
 
+    // Updates local state while dragging.
     const handleSliderChange = (e, value) => {
         e.stopPropagation();
         if (!isControllable || device.type !== 'slider') return;
@@ -75,6 +85,7 @@ export default function DeviceCard({ device, onSelect, isAdmin, onDelete, onTogg
         setLocalSliderValue(Array.isArray(value) ? value[0] : value);
     };
 
+    // Commits the value when the user releases the slider handle.
     const handleSliderCommit = (e, value) => {
         e.stopPropagation();
         if (!isControllable || device.type !== 'slider') return;
@@ -109,6 +120,7 @@ export default function DeviceCard({ device, onSelect, isAdmin, onDelete, onTogg
                     )}
                     onClick={onSelect}
                 >
+                    {/* --- Card Header: Icon, Info & Actions --- */}
                     <div className={clsx("p-6 border-b", config.bgLight)}>
                         <div className="flex items-start justify-between mb-4 gap-3">
                             <div className="flex items-start gap-3 min-w-0">
@@ -158,6 +170,7 @@ export default function DeviceCard({ device, onSelect, isAdmin, onDelete, onTogg
                         </div>
                     </div>
 
+                    {/* --- Card Body: Controls & State --- */}
                     <div className="p-6 flex-1">
                         {device.type === 'switch' && (
                             <div className="flex items-center justify-between">

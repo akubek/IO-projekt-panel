@@ -3,6 +3,11 @@ import { AnimatePresence } from "framer-motion";
 import { motion } from "framer-motion";
 import DeviceCard from "./DeviceCard";
 
+/*
+  DeviceList
+  This component acts as a container and layout orchestrator for the collection of
+  DeviceCard components.
+*/
 function DeviceList({
     devices,
     roomNamesByDeviceId,

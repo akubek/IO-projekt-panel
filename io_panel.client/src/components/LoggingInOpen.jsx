@@ -2,10 +2,19 @@ import Dialog from "@mui/material/Dialog";
 import Button from "@mui/material/Button";
 import { useState } from "react";
 
+/*
+  LoggingInOpen
+  A modal authentication gateway that handles user credentials and JWT acquisition.
+  This component acts as the primary entry point for restricted sessions.
+ */
 export default function LoggingInOpen({ open, onClose, onLogin }) {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
 
+    /**
+     * handleLogin
+     * Manages the network lifecycle of a login attempt.
+     */
     async function handleLogin() {
         try {
             const response = await fetch('/auth/login', {

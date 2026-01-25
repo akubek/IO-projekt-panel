@@ -1,10 +1,16 @@
 import React, { useMemo, useState } from "react";
 
+// Helper function to safely parse numeric inputs, defaulting to 0 if invalid.
 function toNumberOrZero(v) {
     const n = Number(v);
     return Number.isFinite(n) ? n : 0;
 }
 
+/*
+  CreateSceneModal
+  This component provides a modal interface for administrators to create "scenes"
+  (groups of device states that can be triggered together).
+*/
 export default function CreateSceneModal({ open, devices, authToken, onClose, onCreated }) {
     const [name, setName] = useState("");
     const [isPublic, setIsPublic] = useState(true);
@@ -16,14 +22,17 @@ export default function CreateSceneModal({ open, devices, authToken, onClose, on
 
     const isAdmin = !!authToken;
 
+    // Filter devices to only include types that make sense for a scene (switches/sliders).
     const eligibleDevices = useMemo(() => {
         return (devices ?? []).filter(d => (d.type === "switch" || d.type === "slider"));
     }, [devices]);
 
+    // Further filter to ensure we don't try to control read-only sensors.
     const writableEligibleDevices = useMemo(() => {
         return eligibleDevices.filter(d => !d?.config?.readOnly);
     }, [eligibleDevices]);
 
+    // Determine which devices appear in the dropdown (exclude those already added).
     const availableToAdd = useMemo(() => {
         const used = new Set(Object.keys(actions));
         return writableEligibleDevices.filter(d => !used.has(d.id));
@@ -50,6 +59,7 @@ export default function CreateSceneModal({ open, devices, authToken, onClose, on
 
     const selectClassName = inputClassName;
 
+    // Adds the selected device from the dropdown to the 'actions' list with default values.
     function addAction() {
         const id = selectedDeviceId;
         if (!id) return;
@@ -85,6 +95,7 @@ export default function CreateSceneModal({ open, devices, authToken, onClose, on
         });
     }
 
+    // Updates the target state for a switch.
     function updateSwitch(deviceId, isOn) {
         setActions(prev => ({
             ...prev,
@@ -92,6 +103,7 @@ export default function CreateSceneModal({ open, devices, authToken, onClose, on
         }));
     }
 
+    // Updates the target value for a slider.
     function updateSlider(deviceId, value) {
         setActions(prev => ({
             ...prev,
@@ -99,6 +111,7 @@ export default function CreateSceneModal({ open, devices, authToken, onClose, on
         }));
     }
 
+    // Submits the new Scene to the backend.
     async function createScene() {
         const sceneName = name.trim();
         if (!sceneName) return;

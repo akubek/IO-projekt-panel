@@ -3,9 +3,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Home, Tv, Plus, Trash2, Unlink } from 'lucide-react';
 import DeviceCard from './DeviceCard';
 
+/* 
+  RoomCard
+  A specialized container component that groups DeviceCards by their
+  logical room assignment.It provides high - level administrative controls for 
+  room - wide management.
+ */
 const RoomCard = ({ room, isAdmin, onAddDevice, onDelete, onRemoveDevice, onToggle, onSetValue, pendingCommandsByDeviceId, roomNamesByDeviceId, onSelectDevice }) => {
     const deviceCount = room.devices?.length || 0;
 
+    /**
+     * Prevents the click from bubbling up and handles room deletion.
+     */
     const handleDelete = (e) => {
         e.stopPropagation();
         if (onDelete) {
@@ -13,6 +22,10 @@ const RoomCard = ({ room, isAdmin, onAddDevice, onDelete, onRemoveDevice, onTogg
         }
     };
 
+    /**
+     * Specifically handles the 'Unlink' action to remove a device-room association 
+     * without deleting the device itself from the system.
+     */
     const handleRemoveDevice = (e, deviceId) => {
         e.stopPropagation();
         if (onRemoveDevice) {
@@ -67,6 +80,7 @@ const RoomCard = ({ room, isAdmin, onAddDevice, onDelete, onRemoveDevice, onTogg
                     {deviceCount} {deviceCount === 1 ? 'device' : 'devices'}
                 </div>
 
+                {/* Internal Device Grid */}
                 {deviceCount > 0 && (
                     <div className="mt-4 grid gap-2 justify-start [grid-template-columns:repeat(auto-fit,minmax(320px,384px))] items-start">
                         <AnimatePresence mode="popLayout">

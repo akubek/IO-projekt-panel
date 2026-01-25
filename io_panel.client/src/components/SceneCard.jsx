@@ -3,6 +3,9 @@ import { motion } from "framer-motion";
 import Button from "@mui/material/Button";
 import { Film, Wand2, Trash2 } from "lucide-react";
 
+/**
+ * Transforms target state values into readable strings based on device hardware type.
+ */
 function formatTargetStateForDevice(targetState, deviceType) {
     if (!targetState) return "-";
 
@@ -17,6 +20,12 @@ function formatTargetStateForDevice(targetState, deviceType) {
     return `${value}${unit}`;
 }
 
+/*
+  SceneCard
+  A specialized automation component that displays a Scene
+  It allows users to execute multiple commands
+  simultaneously across different hardware.
+*/
 export default function SceneCard({ scene, canActivate, onActivate, deviceById, isAdmin, onDelete }) {
     const actionCount = scene.actions?.length ?? 0;
 
@@ -78,6 +87,7 @@ export default function SceneCard({ scene, canActivate, onActivate, deviceById, 
                 </div>
             </div>
 
+            {/* Content Section */}
             <div className="border-t border-slate-100 bg-slate-50 p-5">
                 {actionCount === 0 ? (
                     <p className="text-sm text-slate-500">No actions in this scene.</p>

@@ -1,6 +1,10 @@
 import React, { useMemo } from "react";
 import { Trash2, Zap } from "lucide-react";
 
+/**
+ * Helper: Sanitizes unit strings for display.
+ * Removes technical null/undefined strings often returned by simulation APIs.
+ */
 function normalizeUnit(value) {
     if (value == null) return "";
     const s = String(value).trim();
@@ -10,15 +14,25 @@ function normalizeUnit(value) {
     return s;
 }
 
+/**
+ * Helper: Checks if a device state is a boolean (On/Off) based on its unit definition.
+ */
 function isBoolUnit(unit) {
     return normalizeUnit(unit).toLowerCase() === "bool";
 }
 
+/**
+ * Helper: Converts numeric/binary states to user-friendly "On/Off" labels.
+ */
 function toOnOff(value) {
     const n = typeof value === "number" ? value : Number(value);
     return Number.isFinite(n) && n > 0 ? "On" : "Off";
 }
 
+/**
+ * Helper: Maps logical comparison operators from the backend (enums or strings)
+ * to mathematical symbols for the UI.
+ */
 function opToText(op) {
     // server may return enum as number (0..4) or as string
     if (typeof op === "number") {
@@ -42,6 +56,9 @@ function opToText(op) {
     }
 }
 
+/**
+ * Helper: Formats the automation's active time period (e.g., "08:00 - 16:00").
+ */
 function formatTimeWindow(window) {
     if (!window) return null;
 
@@ -56,6 +73,12 @@ function formatTimeWindow(window) {
     return `${fromText} - ${toText}`;
 }
 
+/*
+  AutomationCard Component
+  This component displays a single Automation Rule, detailing its Trigger (when it happens)
+  and its Action (what it does). It supports administrative tasks like toggling
+  the rule's active state or deleting it.
+*/
 function AutomationCard({ automation, isAdmin, onDelete, onToggleEnabled, deviceById, sceneById }) {
     const enabledText = automation.isEnabled ? "Enabled" : "Disabled";
 
@@ -66,6 +89,7 @@ function AutomationCard({ automation, isAdmin, onDelete, onToggleEnabled, device
     const action = automation.action ?? {};
     const actionKind = action.kind;
 
+    // Logic to construct a descriptive text for the automation's outcome
     const actionText = useMemo(() => {
         if (actionKind === "SetDeviceState" || actionKind === 0) {
             const deviceId = action.deviceId;
@@ -78,6 +102,7 @@ function AutomationCard({ automation, isAdmin, onDelete, onToggleEnabled, device
             return `Set ${deviceName} to ${valueText}${unitText}`;
         }
 
+        // Handle Scene actions (e.g., Activating "Movie Night")
         if (actionKind === "RunScene" || actionKind === 1) {
             const sceneId = action.sceneId;
             const sceneName = sceneById?.get(sceneId)?.name ?? sceneId ?? "(no scene)";
@@ -109,6 +134,7 @@ function AutomationCard({ automation, isAdmin, onDelete, onToggleEnabled, device
                     </h3>
                 </div>
 
+                {/* Admin controls: Toggle switch and Delete button */}
                 <div className="flex items-center gap-2">
                     {isAdmin && (
                         <label className="inline-flex items-center gap-2 text-sm select-none cursor-pointer">
@@ -143,6 +169,7 @@ function AutomationCard({ automation, isAdmin, onDelete, onToggleEnabled, device
 
             <p className="text-sm text-slate-500 mt-2">{enabledText}</p>
 
+            {/* Automation Logic Display */}
             <div className="mt-4 space-y-2">
                 <div>
                     <div className="text-xs font-semibold text-slate-700 uppercase tracking-wide">Trigger</div>

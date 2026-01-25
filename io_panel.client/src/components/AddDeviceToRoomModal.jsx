@@ -1,8 +1,14 @@
 import React, { useMemo, useState } from "react";
 
+/* AddDeviceToRoomModal Component
+  This modal allows the Administrator to assign existing virtual devices to a specific room.
+  It manages the organizational structure of the Smart Home by linking devices to rooms
+  via the Control Panel API.
+*/
 export default function AddDeviceToRoomModal({ open, room, devices, authToken, onClose, onAdded }) {
     const [isBusy, setIsBusy] = useState(false);
 
+    // Filters out devices that are already assigned to the current room to prevent duplicates
     const availableDevices = useMemo(() => {
         const assigned = new Set((room?.devices ?? []).map(d => d.id));
         return (devices ?? []).filter(d => !assigned.has(d.id));
@@ -10,6 +16,8 @@ export default function AddDeviceToRoomModal({ open, room, devices, authToken, o
 
     if (!open || !room) return null;
 
+    //Handles the API call to link a device to the room.
+    //Communicates with the Control Panel backend to persist the room's new configuration.
     async function addDevice(deviceId) {
         try {
             setIsBusy(true);
@@ -57,6 +65,7 @@ export default function AddDeviceToRoomModal({ open, room, devices, authToken, o
                     </button>
                 </div>
 
+                {/* List of devices eligible for assignment */}
                 <div className="max-h-72 overflow-auto">
                     {availableDevices.length === 0 ? (
                         <p className="text-sm text-slate-500">No available configured devices.</p>

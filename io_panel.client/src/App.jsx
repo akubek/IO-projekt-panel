@@ -18,6 +18,11 @@ import * as signalR from "@microsoft/signalr";
 import DeviceList from './components/DeviceList';
 import TimeConfigModal from './components/TimeConfigModal';
 
+/*
+  App Component
+  This is the central orchestration layer of the IoT system.It serves as a
+  real - time dashboard for managing a virtual smart home ecosystem.
+*/
 function App() {
     const [devices, setDevices] = useState([]);
     const [rooms, setRooms] = useState([]);

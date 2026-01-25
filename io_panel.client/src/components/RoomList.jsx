@@ -1,6 +1,12 @@
 import React from 'react';
 import RoomCard from './RoomCard';
 
+/*
+  RoomList
+  A structural container component that manages the vertical stack of
+  logical rooms. It serves as the primary data - delivery mechanism for 
+  room - specific operations.
+ */
 function RoomList({ rooms, isAdmin, onAddDevice, onDelete, onRemoveDevice, onToggle, onSetValue, pendingCommandsByDeviceId, roomNamesByDeviceId, onSelectDevice }) {
     if (!rooms || rooms.length === 0) {
         return <p className="px-6 text-slate-500">No rooms found. Add a room to get started.</p>;

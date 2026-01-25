@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 
+/** * UI Mapping for logical comparisons 
+ */
 const operatorOptions = [
     { value: "GreaterThan", label: ">" },
     { value: "GreaterThanOrEqual", label: ">=" },
@@ -8,6 +10,8 @@ const operatorOptions = [
     { value: "Equal", label: "=" }
 ];
 
+/** * Enum mapping for the backend API 
+ */
 const operatorValueToEnumNumber = {
     Equal: 0,
     GreaterThan: 1,
@@ -16,6 +20,7 @@ const operatorValueToEnumNumber = {
     LessThanOrEqual: 4
 };
 
+// These jelpers ensure that raw data from the simulator doesn't crash the UI
 function normalizeUnit(value) {
     if (value == null) return "";
     const s = String(value).trim();
@@ -89,6 +94,8 @@ function CreateAutomationModal({ open, onClose, onCreated, authToken, devices, s
     const [actionSceneId, setActionSceneId] = useState("");
 
     const deviceOptions = useMemo(() => (devices ?? []), [devices]);
+
+    // Filters out sensors/read-only devices so the user can't "set" a value on them
     const writableDeviceOptions = useMemo(() => deviceOptions.filter(d => !d?.config?.readOnly), [deviceOptions]);
 
     const sceneOptions = useMemo(() => (scenes ?? []), [scenes]);
@@ -195,6 +202,10 @@ function CreateAutomationModal({ open, onClose, onCreated, authToken, devices, s
 
     if (!open) return null;
 
+    /**
+     * Submits the automation to the backend.
+     * Combines Device Logic + Time Windows + Action Logic into a single payload.
+     */
     async function handleCreate() {
         if (!authToken) return;
 

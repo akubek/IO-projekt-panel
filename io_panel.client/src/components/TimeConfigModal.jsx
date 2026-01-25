@@ -26,6 +26,11 @@ function dateTimeLocalToUtcIso(dateTimeLocal) {
     return local.toISOString();
 }
 
+/* 
+  TimeConfigModal
+  This component provides an administrative interface to manually override the 
+  server's system time (Virtual Time).
+*/
 export default function TimeConfigModal({ open, authToken, onClose, onSaved }) {
     const [saving, setSaving] = useState(false);
     const [virtualNowLocal, setVirtualNowLocal] = useState(toDateTimeLocalValue(new Date()));

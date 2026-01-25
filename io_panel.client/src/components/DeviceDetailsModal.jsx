@@ -31,11 +31,17 @@ const deviceTypeConfig = {
     }
 };
 
+/**
+ * Ensures a value is a valid number, otherwise returns the fallback.
+ */
 function toNumberOr(value, fallback) {
     const n = typeof value === "number" ? value : Number(value);
     return Number.isFinite(n) ? n : fallback;
 }
 
+/**
+ * Keeps a number within specified boundaries.
+ */
 function clamp(value, min, max) {
     if (!Number.isFinite(value)) return min;
     if (value < min) return min;
@@ -43,6 +49,9 @@ function clamp(value, min, max) {
     return value;
 }
 
+/**
+ * Cleans up unit strings.
+ */
 function normalizeUnit(value) {
     if (value == null) return "";
     const s = String(value).trim();
@@ -52,7 +61,13 @@ function normalizeUnit(value) {
     return s;
 }
 
+/*
+  DeviceDetailsModal
+  This component provides a comprehensive "deep dive" view of a specific device.
+  It is rendered as a modal backdrop with a centralized information card.
+*/
 export default function DeviceDetailsModal({ open, device, onClose, onToggle, onSetValue, refreshToken }) {
+    // Default object structure to prevent "undefined" errors during rendering.
     const safeDevice = device ?? {
         id: "",
         type: "switch",
@@ -70,10 +85,12 @@ export default function DeviceDetailsModal({ open, device, onClose, onToggle, on
     const config = deviceTypeConfig[safeDevice.type] || deviceTypeConfig.switch;
     const Icon = config.icon;
 
+    // Permissions check: Only allow interaction if not readOnly and is a controllable type.
     const isControllable = useMemo(() => {
         if (safeDevice?.config?.readOnly) return false;
         return safeDevice?.type === "switch" || safeDevice?.type === "slider";
     }, [safeDevice?.config?.readOnly, safeDevice?.type]);
+
 
     const isOn = toNumberOr(safeDevice.state?.value, 0) > 0;
 
@@ -88,6 +105,7 @@ export default function DeviceDetailsModal({ open, device, onClose, onToggle, on
     const [isDragging, setIsDragging] = useState(false);
     const [localSliderValue, setLocalSliderValue] = useState(() => toNumberOr(safeDevice.state?.value, 0));
 
+    // Reset local state whenever the modal opens or the device changes.
     useEffect(() => {
         if (!open) return;
 
@@ -98,6 +116,7 @@ export default function DeviceDetailsModal({ open, device, onClose, onToggle, on
     const displayedSliderValue = safeDevice.type === "slider" ? toNumberOr(safeDevice.state?.value, 0) : 0;
     const sliderValueToRender = isDragging ? localSliderValue : displayedSliderValue;
 
+    // Handlers 
     const handleSwitchChange = (e, checked) => {
         e.stopPropagation();
         if (!isControllable || safeDevice.type !== "switch") return;
@@ -146,6 +165,7 @@ export default function DeviceDetailsModal({ open, device, onClose, onToggle, on
         return null;
     }
 
+    // Sensor Visual Calculation 
     const sensorMin = toNumberOr(safeDevice.config?.min, 0);
     const sensorMaxRaw = toNumberOr(safeDevice.config?.max, 100);
     const sensorMax = sensorMaxRaw === 0 ? 100 : sensorMaxRaw;
@@ -200,6 +220,7 @@ export default function DeviceDetailsModal({ open, device, onClose, onToggle, on
                         </div>
                     </div>
 
+                    {/* Content Section: Info Sidebar & Chart Main Area */}
                     <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-6 p-6">
                         <div>
                             {safeDevice.type === "switch" && (

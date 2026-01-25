@@ -1,6 +1,12 @@
 import React from 'react';
 
+/* AddDeviceModal Component
+ This modal allows the Administrator to discover and select unconfigured virtual devices
+ fetched from the Device Simulator.It serves as the primary interface for expanding
+ the smart home system by linking "hardware" from the simulator to the Control Panel.
+*/
 export default function AddDeviceModal({ open, devices, onClose, onSelect }) {
+    // Render nothing if the modal is not active
     if (!open) return null;
 
     return (
@@ -34,6 +40,7 @@ export default function AddDeviceModal({ open, devices, onClose, onSelect }) {
                                         <td className="py-2 pr-4">{d.state?.value}</td>
                                         <td className="py-2 pr-4">{d.state?.unit}</td>
                                         <td className="py-2 pr-4">
+                                            {/*Action to trigger the configuration process for the chosen device*/}
                                             <button
                                                 type="button"
                                                 onClick={(e) => { e.stopPropagation(); onSelect && onSelect(d); }}
