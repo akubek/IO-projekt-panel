@@ -567,10 +567,16 @@ function App() {
     }
 
     const nowLocalText = (() => {
-        if (!timeSnapshot?.nowLocal) return "--:--:-- • ----/--/--";
-        const d = new Date(timeSnapshot.nowLocal);
-        const time = d.toLocaleTimeString(undefined, { hour12: false });
-        const date = d.toLocaleDateString();
+        const raw = timeSnapshot?.nowLocal;
+        if (!raw) return "--:--:-- • ----/--/--";
+
+        // Accept ISO strings like 2026-01-25T18:00:00+01:00 or ...Z
+        const iso = String(raw);
+        const m = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2})/.exec(iso);
+        if (!m) return "--:--:-- • ----/--/--";
+
+        const date = m[1];
+        const time = m[2];
         return `${time} • ${date}`;
     })();
 

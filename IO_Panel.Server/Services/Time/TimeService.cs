@@ -34,10 +34,15 @@ public sealed class TimeService : ITimeService
 
         var nowUtcComputed = ComputeVirtualNowUtc(cfg, DateTimeOffset.UtcNow);
 
+        var tzId = string.IsNullOrWhiteSpace(cfg.TimeZoneId) ? "UTC" : cfg.TimeZoneId;
+        var tz = ResolveTimeZoneOrUtc(tzId);
+
+        var nowLocalComputed = TimeZoneInfo.ConvertTime(nowUtcComputed, tz);
+
         return new TimeSnapshot(
-            TimeZoneId: "UTC",
+            TimeZoneId: tz.Id,
             NowUtc: nowUtcComputed,
-            NowLocal: nowUtcComputed,
+            NowLocal: nowLocalComputed,
             AppliedAtUtc: cfg.AppliedAtUtc,
             VirtualNowAtAppliedUtc: cfg.VirtualNowAtAppliedUtc);
     }
@@ -49,26 +54,29 @@ public sealed class TimeService : ITimeService
             throw new InvalidOperationException("VirtualNowLocal is required.");
         }
 
+        var tz = ResolveTimeZoneOrUtc(string.IsNullOrWhiteSpace(timeZoneId) ? "UTC" : timeZoneId);
+
         // Accept ISO 8601 (e.g. 2026-01-25T12:00:00.000Z or with offset) OR datetime-local (yyyy-MM-ddTHH:mm).
         DateTimeOffset virtualNowUtc;
 
-        if (DateTimeOffset.TryParse(
+        if (DateTime.TryParseExact(
                 virtualNowLocal,
+                "yyyy-MM-dd'T'HH:mm",
                 CultureInfo.InvariantCulture,
-                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
-                out var parsedDto))
+                DateTimeStyles.None,
+                out var localWallClock))
         {
-            virtualNowUtc = parsedDto;
+            localWallClock = DateTime.SpecifyKind(localWallClock, DateTimeKind.Unspecified);
+            var offset = tz.GetUtcOffset(localWallClock);
+            virtualNowUtc = new DateTimeOffset(localWallClock, offset).ToUniversalTime();
         }
-        else if (DateTime.TryParseExact(
+        else if (DateTimeOffset.TryParse(
                      virtualNowLocal,
-                     "yyyy-MM-dd'T'HH:mm",
                      CultureInfo.InvariantCulture,
-                     DateTimeStyles.None,
-                     out var utcWallClock))
+                     DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+                     out var parsedDto))
         {
-            utcWallClock = DateTime.SpecifyKind(utcWallClock, DateTimeKind.Utc);
-            virtualNowUtc = new DateTimeOffset(utcWallClock);
+            virtualNowUtc = parsedDto.ToUniversalTime();
         }
         else
         {
@@ -76,9 +84,11 @@ public sealed class TimeService : ITimeService
                 $"Invalid VirtualNowLocal: '{virtualNowLocal}'. Expected ISO-8601 (e.g. 2026-01-25T12:00:00Z) or yyyy-MM-ddTHH:mm.");
         }
 
+        virtualNowUtc = virtualNowUtc.ToUniversalTime();
+
         var entity = new TimeConfigurationEntity
         {
-            TimeZoneId = "UTC",
+            TimeZoneId = tz.Id,
             AppliedAtUtc = DateTimeOffset.UtcNow,
             VirtualNowAtAppliedUtc = virtualNowUtc
         };
@@ -101,5 +111,17 @@ public sealed class TimeService : ITimeService
     {
         var elapsed = realNowUtc - cfg.AppliedAtUtc;
         return cfg.VirtualNowAtAppliedUtc + elapsed;
+    }
+
+    private static TimeZoneInfo ResolveTimeZoneOrUtc(string timeZoneId)
+    {
+        try
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
+        }
+        catch
+        {
+            return TimeZoneInfo.Utc;
+        }
     }
 }

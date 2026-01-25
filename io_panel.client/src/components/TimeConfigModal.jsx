@@ -47,8 +47,8 @@ export default function TimeConfigModal({ open, authToken, onClose, onSaved }) {
 
                 const data = await res.json();
 
-                // data.nowUtc is UTC; convert to LOCAL input format so user edits local time.
-                setVirtualNowLocal(toDateTimeLocalValue(data.nowUtc ?? new Date()));
+                // Use server's computed local clock for the input.
+                setVirtualNowLocal(toDateTimeLocalValue(data.nowLocal ?? data.nowUtc ?? new Date()));
             } catch {
                 /* empty */
             }
@@ -60,8 +60,7 @@ export default function TimeConfigModal({ open, authToken, onClose, onSaved }) {
     async function handleSave() {
         if (!authToken) return;
 
-        const utcIso = dateTimeLocalToUtcIso(virtualNowLocal);
-        if (!utcIso) {
+        if (!virtualNowLocal || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(virtualNowLocal)) {
             alert("Invalid date/time format.");
             return;
         }
@@ -74,7 +73,7 @@ export default function TimeConfigModal({ open, authToken, onClose, onSaved }) {
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${authToken}`
                 },
-                body: JSON.stringify({ timeZoneId: "UTC", virtualNowLocal: utcIso })
+                body: JSON.stringify({ timeZoneId: localTimeZone, virtualNowLocal })
             });
 
             if (!res.ok) {

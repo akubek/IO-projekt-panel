@@ -254,7 +254,13 @@ function CreateAutomationModal({ open, onClose, onCreated, authToken, devices, s
                     value: safeConditionValue,
                     unit: conditionUnit || null
                 }
-            ]
+            ],
+            timeWindow: useTimeWindow
+                ? {
+                    from: normalizeTimeToHhMmSs(from),
+                    to: normalizeTimeToHhMmSs(to)
+                }
+                : null
         };
 
         const action =
