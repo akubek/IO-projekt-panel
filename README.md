@@ -2,7 +2,7 @@
 
 An academic project developed for the Software Engineering course (Semester 5) at the Silesian University of Technology. This application serves as a central Smart Home control panel, allowing users to add, monitor, and comprehensively manage simulated IoT devices. 
 
-Together with the associated device simulator, the system forms a fully distributed architecture communicating via a RabbitMQ message broker.
+Together with the associated Together with the associated [IoT Device Simulator](TUTAJ_WKLEJ_LINK_DO_REPO_SYMULATORA), the system forms a fully distributed architecture communicating via a RabbitMQ message broker., the system forms a fully distributed architecture communicating via a RabbitMQ message broker.
 
 ## 👥 Team & Roles
 
@@ -52,6 +52,8 @@ The system relies on a decoupled client-server architecture.
 ## ⚙️ Running Locally (Disclaimer)
 
 **Note:** This is an academic Proof-of-Concept project. While it is functional, running it locally requires manual setup and might necessitate some configuration adjustments. 
+
+**Note:** To run the full system and see the real-time interactions, you will also need to clone and run the [IoT Device Simulator](TUTAJ_WKLEJ_LINK_DO_REPO_SYMULATORA).
 
 ### Prerequisites
 1. [.NET 7.0+ SDK](https://dotnet.microsoft.com/download)
